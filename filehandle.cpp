@@ -85,7 +85,10 @@ void * CFileHandle::WorkerThread(void * p)
 
 void InitFileHandleWorker()
 {
-	pthread_create(&fhworker,NULL,CFileHandle::WorkerThread,NULL);
+	pthread_attr_t attr ;
+	pthread_attr_init(&attr);
+	pthread_attr_setstacksize(&attr,0x8000);
+	pthread_create(&fhworker,&attr,CFileHandle::WorkerThread,NULL);
 }
 
 CFileHandleList::CFileHandleList()
