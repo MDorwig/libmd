@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<?fileVersion 4.0.0?>
-
-<cproject>
+<?fileVersion 4.0.0?><cproject>
 	<storageModule moduleId="org.eclipse.cdt.core.settings">
 		<cconfiguration id="cdt.managedbuild.config.gnu.lib.debug.1515040250">
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="cdt.managedbuild.config.gnu.lib.debug.1515040250" moduleId="org.eclipse.cdt.core.settings" name="ppc">
@@ -9,6 +7,8 @@
 					<externalSetting>
 						<entry flags="VALUE_WORKSPACE_PATH" kind="includePath" name="/libmd"/>
 						<entry flags="VALUE_WORKSPACE_PATH" kind="libraryPath" name="Debug"/>
+						<entry flags="VALUE_WORKSPACE_PATH" kind="libraryPath" name="/libmd/ppc"/>
+						<entry flags="RESOLVED" kind="libraryFile" name="libmd" srcPrefixMapping="" srcRootPath=""/>
 					</externalSetting>
 				</externalSettings>
 				<extensions>
@@ -63,6 +63,9 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
+					<sourceEntries>
+						<entry excluding="SecureSocket.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+					</sourceEntries>
 				</configuration>
 			</storageModule>
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
@@ -74,6 +77,8 @@
 					<externalSetting>
 						<entry flags="VALUE_WORKSPACE_PATH" kind="includePath" name="/libmd"/>
 						<entry flags="VALUE_WORKSPACE_PATH" kind="libraryPath" name="Release"/>
+						<entry flags="VALUE_WORKSPACE_PATH" kind="libraryPath" name="/libmd/x86"/>
+						<entry flags="RESOLVED" kind="libraryFile" name="libmd" srcPrefixMapping="" srcRootPath=""/>
 					</externalSetting>
 				</externalSettings>
 				<extensions>
@@ -110,6 +115,9 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
+					<sourceEntries>
+						<entry excluding="SecureSocket.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+					</sourceEntries>
 				</configuration>
 			</storageModule>
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
@@ -122,7 +130,7 @@
 						<entry flags="VALUE_WORKSPACE_PATH" kind="includePath" name="/libmd"/>
 						<entry flags="VALUE_WORKSPACE_PATH" kind="libraryPath" name="Debug"/>
 						<entry flags="VALUE_WORKSPACE_PATH" kind="libraryPath" name="/libmd/linux-bfin-debug"/>
-						<entry flags="RESOLVED" kind="libraryFile" name="libmd"/>
+						<entry flags="RESOLVED" kind="libraryFile" name="libmd" srcPrefixMapping="" srcRootPath=""/>
 					</externalSetting>
 				</externalSettings>
 				<extensions>
@@ -177,6 +185,9 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
+					<sourceEntries>
+						<entry excluding="SecureSocket.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+					</sourceEntries>
 				</configuration>
 			</storageModule>
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
@@ -602,4 +613,5 @@
 			</profile>
 		</scannerConfigBuildInfo>
 	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
 </cproject>
