@@ -5,6 +5,7 @@
  *      Author: dorwig
  */
 
+#include <string.h>
 #include "mdmt.h"
 
 CMutex::CMutex()
@@ -81,13 +82,32 @@ int CEvent::Reset()
 
 int CEvent::Wait()
 {
-	int res ;
+	int res = 0;
 	m_lock.Lock();
-	res = m_cond.Wait(m_lock);
+	if (m_state == 0)
+	  res = m_cond.Wait(m_lock);
+	Reset();
 	m_lock.Release();
 	return res ;
 }
 
+CThread::CThread(const char * name)
+{
+  m_name = strdup(name);
+}
 
+void * CThread::Run(void * pthis)
+{
+  ((CThread*)pthis)->Main();
+  return NULL;
+}
 
+void CThread::Create()
+{
+  pthread_create(&m_id,NULL,Run,this);
+}
 
+void CThread::Main()
+{
+
+}
