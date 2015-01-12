@@ -125,6 +125,7 @@ xmlparser::xmlparser(bool trace)
   m_trace   = trace;
   m_charval = 0 ;
   m_strdelim = 0 ;
+  m_skipws = 0 ;
   for (int i = 0 ; i < (int)(sizeof m_state/sizeof m_state[0]) ; i++)
   {
     m_state[i] = PS_IDLE;
@@ -152,6 +153,18 @@ const char * xmlparser::StateName(parserstate st)
     case  PS_ESCAPE2:     return "PS_ESCAPE2";
     case  PS_ESCAPE3:     return "PS_ESCAPE3";
     case  PS_ESCAPE4:     return "PS_ESCAPE4";
+    case  PS_QUOT1:				return "PS_QUOT1";
+    case  PS_QUOT2:				return "PS_QUOT2";
+    case  PS_QUOT3:				return "PS_QUOT3";
+    case  PS_QUOT4:				return "PS_QUOT4";
+    case  PS_AMPAPOS:			return "PS_AMPAPOS";
+    case  PS_AMP1:				return "PS_AMP1";
+    case  PS_AMP2:				return "PS_AMP2";
+    case  PS_APOS1:				return "PS_APOS1";
+    case  PS_APOS2:				return "PS_APOS2";
+    case  PS_APOS3:				return "PS_APOS3";
+    case  PS_LT:					return "PS_LT";
+    case  PS_GT:					return "PS_GT";
     case  PS_STRING:      return "PS_STRING";
     case  PS_XMLDECL:     return "PS_XMLDECL";
     case  PS_CHARDATA:    return "PS_CHARDATA";
@@ -191,7 +204,7 @@ void xmlparser::onElementComplete(xmlNode * node)
 
 void xmlparser::onDocumentComplete(xmlNode * node)
 {
-
+	m_root = node ;
 }
 
 void xmlparser::setState(parserstate st)
@@ -501,6 +514,7 @@ restart:
         else if (ch == '>')
         {
           m_lexval = "" ;
+          m_skipws = 1;
           pushState(PS_CHARDATA);
         }
       break ;
@@ -508,6 +522,14 @@ restart:
       case  PS_START_TAG1:
         if (ch == '>')
         {
+        	if (m_statesp > 0)
+        	{
+        		if (popState() == PS_OPENTAG)
+        		{
+        			m_ident = m_curnode->m_name;
+        		}
+        		pushState(getState());
+        	}
           completeElement(*input);
           setState(PS_IDLE);
         }
@@ -595,8 +617,29 @@ restart:
       case  PS_ESCAPE1:
         if (ch == '#')
           setState(PS_ESCAPE2); // "&#"
-        else
-          return 0 ;
+        switch (ch)
+        {
+        	case	'q':
+        		setState(PS_QUOT1);
+        	break ;
+
+        	case  'a':
+        		setState(PS_AMPAPOS);	// &a
+        	break ;
+
+        	case 	'l':
+        		setState(PS_LT); // &l
+        	break ;
+
+        	case 	'g':
+        		setState(PS_GT);	// &g
+        	break ;
+
+        	default:
+        		throw xmlparserException("parse error in state %s near %s\n",StateName(getState()),*input);
+        	break ;
+
+        }
       break ;
 
       case  PS_ESCAPE2:
@@ -665,6 +708,86 @@ restart:
         }
       break ;
 
+      case  PS_QUOT1:
+      	if (ch == 'u')
+      		setState(PS_QUOT2);	// &qu
+      	else
+      		throw xmlparserException("parse error in state %s near %s\n",StateName(getState()),*input);
+      break ;
+
+      case	PS_QUOT2:
+      	if (ch == 'o')
+      		setState(PS_QUOT3);	// &quo
+      	else
+      		throw xmlparserException("parse error in state %s near %s\n",StateName(getState()),*input);
+      break ;
+
+      case PS_QUOT3:
+      	if (ch == 't')
+      	{
+      		m_charval = '"';
+      		setState(PS_ESCAPE4); // &quot
+      	}
+      	else
+      		throw xmlparserException("parse error in state %s near %s\n",StateName(getState()),*input);
+      break ;
+
+      case  PS_AMPAPOS:
+      	if (ch == 'm')
+      		setState(PS_AMP1);		// &am
+      	else if (ch == 'p')
+      		setState(PS_APOS1);		// &ap
+      	else
+      		throw xmlparserException("parse error in state %s near %s\n",StateName(getState()),*input);
+      break ;
+
+      case PS_AMP1:
+      	if (ch == 'p')
+      	{
+      		m_charval = '&';	// &amp
+      		setState(PS_ESCAPE4);
+      	}
+      	else
+      		throw xmlparserException("parse error in state %s near %s\n",StateName(getState()),*input);
+      break ;
+
+      case PS_APOS1:
+      	if (ch == 'o')
+      		setState(PS_APOS2);
+      	else
+      		throw xmlparserException("parse error in state %s near %s\n",StateName(getState()),*input);
+      break ;
+
+      case PS_APOS2:
+      	if (ch == 's')
+      	{
+      		m_charval = '\'';
+      		setState(PS_ESCAPE4);
+      	}
+      	else
+      		throw xmlparserException("parse error in state %s near %s\n",StateName(getState()),*input);
+      break ;
+
+      case  PS_LT:
+      	if (ch == 't')
+      	{
+      		m_charval = '<';
+      		setState(PS_ESCAPE4);
+      	}
+      	else
+      		throw xmlparserException("parse error in state %s near %s\n",StateName(getState()),*input);
+      break ;
+
+      case  PS_GT:
+      	if (ch == 't')
+      	{
+      		m_charval = '>';
+      		setState(PS_ESCAPE4);
+      	}
+      	else
+      		throw xmlparserException("parse error in state %s near %s\n",StateName(getState()),*input);
+      break ;
+
       case  PS_CHARDATA:
         if (ch == '<')
         {
@@ -687,7 +810,11 @@ restart:
         }
         else
         {
-          m_lexval += ch ;
+        	if (!isWhiteSpace(ch) || !m_skipws)
+        	{
+        		m_skipws=0;
+        		m_lexval += ch ;
+        	}
         }
       break ;
 
@@ -702,5 +829,3 @@ restart:
   }
   return -1 ;
 }
-
-
