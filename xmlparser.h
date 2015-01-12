@@ -73,6 +73,9 @@ public:
   list<xmlNode*> m_children;
 };
 
+typedef list<xmlNode*>::iterator xmlNodeIterator;
+typedef list<xmlAttr*>::iterator xmlAttrIterator;
+
 class xmlparser
 {
 public:
@@ -129,20 +132,20 @@ public:
   void        pushState(parserstate st);
   parserstate popState();
   void        completeElement(const char * input);
-  void        onXmlDecl(xmlNode * decl);
-  void        onContent(xmlNode * node,const string & content);
-  void        onElementComplete(xmlNode * node);
-  void        onDocumentComplete(xmlNode * node);
-  bool        m_trace;
+  virtual void onXmlDecl(xmlNode * decl);
+  virtual void onContent(xmlNode * node,const string & content);
+  virtual void onElementComplete(xmlNode * node);
+  virtual void onDocumentComplete(xmlNode * node);
   xmlscanner  m_scanner;
   parserstate m_state[16] ;
+  unsigned    m_trace:1;
   unsigned    m_skipws:1;
   int         m_statesp;
-  string m_ident;
-  string m_attrval;
+  string 			m_ident;
+  string 			m_attrval;
   int         m_strdelim ;
   int         m_charval;
-  string m_lexval;
+  string 			m_lexval;
   xmlNode *   m_root;
   xmlNode *   m_curnode;
 };
