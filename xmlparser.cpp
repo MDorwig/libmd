@@ -813,6 +813,8 @@ restart:
         	if (!isWhiteSpace(ch) || !m_skipws)
         	{
         		m_skipws=0;
+        		if (ch == '\n')
+        			m_skipws = 1 ;
         		m_lexval += ch ;
         	}
         }
