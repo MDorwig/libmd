@@ -91,6 +91,18 @@ public:
     PS_ESCAPE2,
     PS_ESCAPE3,
     PS_ESCAPE4,
+    PS_QUOT1,
+    PS_QUOT2,
+    PS_QUOT3,
+    PS_QUOT4,
+    PS_AMPAPOS,
+    PS_AMP1,
+    PS_AMP2,
+    PS_APOS1,
+    PS_APOS2,
+    PS_APOS3,
+    PS_LT,
+    PS_GT,
     PS_CHARDATA,
     PS_XMLDECL,
     PS_COMMENT,
@@ -124,6 +136,7 @@ public:
   bool        m_trace;
   xmlscanner  m_scanner;
   parserstate m_state[16] ;
+  unsigned    m_skipws:1;
   int         m_statesp;
   string m_ident;
   string m_attrval;
