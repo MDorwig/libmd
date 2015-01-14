@@ -56,6 +56,7 @@ public:
   char * m_text;
 };
 
+
 class xmlNode
 {
 public:
@@ -65,6 +66,8 @@ public:
     m_type = t ;
     m_parent = NULL;
   }
+  bool hasChildren()  { return m_children.begin() != m_children.end() ; }
+  bool hasAttributes(){ return m_attr.begin() != m_attr.end() ; }
   xmlNodeType m_type;
   xmlNode *   m_parent;
   string      m_name ;
@@ -120,34 +123,35 @@ public:
     PS_COMPLETE,
   } ;
 
-              xmlparser(bool trace);
-  virtual    ~xmlparser();
-  bool        isNameStartChar(int ch);
-  bool        isNameChar(int ch);
-  bool        isWhiteSpace(int ch);
-  int         parse(const char ** input);
-  const char * StateName(parserstate st);
-  void        setState(parserstate st);
-  parserstate getState();
-  void        pushState(parserstate st);
-  parserstate popState();
-  void        completeElement(const char * input);
-  virtual void onXmlDecl(xmlNode * decl);
-  virtual void onContent(xmlNode * node,const string & content);
-  virtual void onElementComplete(xmlNode * node);
-  virtual void onDocumentComplete(xmlNode * node);
-  xmlscanner  m_scanner;
-  parserstate m_state[16] ;
-  unsigned    m_trace:1;
-  unsigned    m_skipws:1;
-  int         m_statesp;
-  string 			m_ident;
-  string 			m_attrval;
-  int         m_strdelim ;
-  int         m_charval;
-  string 			m_lexval;
-  xmlNode *   m_root;
-  xmlNode *   m_curnode;
+              	xmlparser(bool trace);
+  virtual    	 ~xmlparser();
+  bool        	isNameStartChar(int ch);
+  bool        	isNameChar(int ch);
+  bool        	isWhiteSpace(int ch);
+  int         	parse(const char ** input);
+  const char *	StateName(parserstate st);
+  void        	setState(parserstate st);
+  parserstate 	getState();
+  void        	pushState(parserstate st);
+  parserstate 	popState();
+  void        	completeElement(const char * input);
+  virtual void 	onXmlDecl(xmlNode * decl);
+  virtual void 	onContent(xmlNode * node,const string & content);
+  virtual void 	onElementComplete(xmlNode * node);
+  virtual void 	onDocumentComplete(xmlNode * node);
+  void        	AddNode(xmlNode * n);
+  xmlscanner  	m_scanner;
+  parserstate 	m_state[16] ;
+  unsigned    	m_trace:1;
+  unsigned    	m_skipws:1;
+  int         	m_statesp;
+  string 				m_ident;
+  string 				m_attrval;
+  int         	m_strdelim ;
+  int         	m_charval;
+  string 				m_lexval;
+  xmlNode *   	m_root;
+  xmlNode *   	m_curnode;
 };
 
 

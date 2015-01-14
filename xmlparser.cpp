@@ -306,6 +306,23 @@ void xmlparser::completeElement(const char * input)
   }
 }
 
+void xmlparser::AddNode(xmlNode * n)
+{
+	if (m_curnode == NULL)
+	{
+		if (n->m_type == XML_DECL_NODE)
+		{
+			m_curnode = n ;
+			return ;
+		}
+		m_curnode = new xmlNode("xml",XML_DECL_NODE);
+		m_curnode->m_attr.push_back(new xmlAttr("version","1.0"));
+	}
+	m_curnode->m_children.push_back(n);
+	n->m_parent = m_curnode ;
+  m_curnode = n ;
+}
+
 int xmlparser::parse(const char ** input)
 {
   while(1)
@@ -410,7 +427,7 @@ restart:
           }
         }
         else
-          return 0 ;
+          throw xmlparserException("'>' expected near %s",*input);
       break ;
 
       case  PS_XMLDECL:
@@ -438,7 +455,7 @@ restart:
           }
           else
           {
-            return 0;
+            throw xmlparserException("identifier expected near %s",*input);
           }
         }
       break ;
@@ -453,7 +470,7 @@ restart:
              case PS_XMLDECL:
               if (m_ident == "xml")
               {
-                m_curnode = new xmlNode(m_ident,XML_DECL_NODE);
+                AddNode(new xmlNode(m_ident,XML_DECL_NODE));
                 pushState(PS_ATTR_LIST);
                 goto restart;
               }
@@ -469,9 +486,7 @@ restart:
             case  PS_START_TAG:
             {
               xmlNode * n = new xmlNode(m_ident,XML_ELEMENT_NODE);
-              m_curnode->m_children.push_back(n);
-              n->m_parent = m_curnode ;
-              m_curnode = n ;
+              AddNode(n);
               pushState(PS_ATTR_LIST);
             }
             goto restart ;
@@ -566,7 +581,7 @@ restart:
           setState(PS_ATTR_EQ);
         }
         else
-          return 0 ;
+          throw xmlparserException("attributename expected in state %s near %s\n",StateName(getState()),*input);
       break ;
 
       case  PS_ATTR_EQ:
@@ -577,7 +592,7 @@ restart:
             setState(PS_ATTR_VALUE);
           }
           else
-            return 0 ;
+            throw xmlparserException("'=' expected in state %s near %s\n",StateName(getState()),*input);
         }
       break ;
 
