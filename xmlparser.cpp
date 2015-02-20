@@ -295,10 +295,9 @@ void xmlparser::completeElement(const char * input)
     if (m_curnode == NULL || m_curnode->m_type == XML_DECL_NODE)
     {
       onDocumentComplete(m_curnode);
-      setState(PS_COMPLETE);
+      m_root = m_curnode = NULL;
     }
-    else
-      setState(PS_IDLE);
+    setState(PS_IDLE);
   }
   else
   {

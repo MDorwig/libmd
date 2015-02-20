@@ -41,6 +41,13 @@ public:
   string m_value;
 };
 
+#define for_each_attr(attr,node) \
+	xmlAttrPtr attr; \
+	for (xmlAttrIterator item = node->m_attr.begin() ;\
+	item != node->m_attr.end() && (attr = *item) != NULL  ;\
+	item++)
+
+
 enum xmlNodeType
 {
   XML_DECL_NODE,
@@ -56,6 +63,16 @@ public:
   char * m_text;
 };
 
+class xmlNode;
+class xmlAttr;
+
+typedef xmlNode * xmlNodePtr ;
+typedef xmlNode * xmlDocPtr ;
+typedef xmlAttr * xmlAttrPtr ;
+typedef char xmlChar ;
+
+typedef list<xmlNodePtr>::iterator xmlNodeIterator;
+typedef list<xmlAttrPtr>::iterator xmlAttrIterator;
 
 class xmlNode
 {
@@ -66,6 +83,18 @@ public:
     m_type = t ;
     m_parent = NULL;
   }
+  ~xmlNode()
+  {
+  	for (xmlAttrIterator ai = m_attr.begin() ; ai != m_attr.end() ; ai++)
+  	{
+  		delete *ai ;
+  	}
+  	for (xmlNodeIterator ni = m_children.begin() ; ni != m_children.end() ; ni++)
+  	{
+  		delete *ni ;
+  	}
+  }
+
   bool hasChildren()  { return m_children.begin() != m_children.end() ; }
   bool hasAttributes(){ return m_attr.begin() != m_attr.end() ; }
   xmlNodeType m_type;
@@ -76,8 +105,12 @@ public:
   list<xmlNode*> m_children;
 };
 
-typedef list<xmlNode*>::iterator xmlNodeIterator;
-typedef list<xmlAttr*>::iterator xmlAttrIterator;
+#define for_each_child(child,node) \
+	xmlNodePtr child ;\
+	for (xmlNodeIterator item = node->m_children.begin() ;\
+	     item != node->m_children.end() && (child = *item) != NULL ;\
+	     item++)
+
 
 class xmlparser
 {

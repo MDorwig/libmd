@@ -8,6 +8,8 @@
 #ifndef LIST_H_
 #define LIST_H_
 
+#include <stddef.h>
+
 class CListItem
 {
 public:
@@ -90,7 +92,8 @@ public:
 
 };
 
-#define fromitem(item,typ,list) (typ*)((char*)item-offsetof(typ,list))
+#define mbroffset(typ,mbr) (((unsigned)(&((typ*)4)->mbr))-4)
+#define fromitem(item,typ,list) (typ*)((char*)item-mbroffset(typ,list))
 
 #define listforeach(item,list) for( item = list->m_next ; item != list ; item = item->m_next)
 

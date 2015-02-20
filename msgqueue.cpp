@@ -29,14 +29,24 @@ CMsg::CMsg(delegate d,void * p1,long unsigned p2,long unsigned p3)
   m_d  = d ;
 }
 
+CMsgQueue::CMsgQueue() : m_lock(new CMutex()), m_notempty(new CEvent())
+{
+
+}
+
+CMsgQueue::~CMsgQueue()
+{
+	delete m_lock;
+	delete m_notempty;
+}
 
 void CMsgQueue::PostMessage(CMsg * msg)
 {
-  m_lock.Lock();
+  m_lock->Lock();
   printf("Add Msg %d\n",msg->Id());
   m_list.AddTail(*msg);
-  m_lock.Release();
-  m_notempty.Set();
+  m_lock->Release();
+  m_notempty->Set();
 }
 
 void CMsgQueue::PostMessage(const CMsg & item)
@@ -62,17 +72,17 @@ void CMsgQueue::GetMessage(CMsg & msg)
   CMsg * m ;
   while(1)
   {
-      m_lock.Lock();
+      m_lock->Lock();
       m = (CMsg*)m_list.GetHead();
       while (m == NULL)
       {
-          m_lock.Release();
-          m_notempty.Wait();
+          m_lock->Release();
+          m_notempty->Wait();
           m = (CMsg*)m_list.GetHead();
-          m_lock.Lock();
+          m_lock->Lock();
       }
       m_list.Remove(*m);
-      m_lock.Release();
+      m_lock->Release();
       if (m->Id() != MSG_INVOKE)
       {
           msg = *m ;

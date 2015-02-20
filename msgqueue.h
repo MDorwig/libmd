@@ -14,6 +14,7 @@ enum MsgId
 {
   MSG_INVOKE = 1,
   MSG_TIMER  = 2,
+	MSG_SCEMSG = 3,
 };
 
 typedef void (*delegate)(unsigned long p1,unsigned p2,unsigned p3);
@@ -38,12 +39,17 @@ private:
   delegate m_d;
 };
 
+class CMutex;
+class CEvent;
+
 class CMsgQueue
 {
 public:
+	CMsgQueue();
+	~CMsgQueue();
   CItemList m_list ;
-  CMutex    m_lock;
-  CEvent    m_notempty;
+  CMutex  * m_lock;
+  CEvent  * m_notempty;
   void PostMessage(const CMsg & item);
   void PostMessage(MsgId id, long unsigned p1 = 0, long unsigned p2 = 0, long unsigned p3 = 0);
   void PostMessage(delegate d,void * pthis, long unsigned p2 = 0, long unsigned p3 = 0);

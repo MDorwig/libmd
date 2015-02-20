@@ -69,4 +69,5 @@ private:
   CMsgQueue m_msgqueue;
 };
 
+unsigned getTickCount();
 #endif /* MDMT_H_ */
