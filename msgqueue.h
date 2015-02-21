@@ -9,38 +9,30 @@
 #define MSGQUEUE_H_
 
 #include "list.h"
+#include "mdmt.h"
 
-enum MsgId
-{
-  MSG_INVOKE = 1,
-  MSG_TIMER  = 2,
-	MSG_SCEMSG = 3,
-};
-
-typedef void (*delegate)(unsigned long p1,unsigned p2,unsigned p3);
+typedef void (*MsgQueueDelegate)(unsigned long p1,unsigned p2,unsigned p3);
 
 class CMsg : public CListItem
 {
 public:
   CMsg();
-  CMsg(MsgId   id, long unsigned p1 = 0, long unsigned p2 =0, long unsigned p3 = 0);
-  CMsg(delegate d, long unsigned p1 = 0, long unsigned p2 =0, long unsigned p3 = 0);
-  CMsg(delegate d,void * pthis, long unsigned p2 =0, long unsigned p3 = 0);
-  MsgId Id()    const { return m_id;}
+  CMsg(unsigned id, long unsigned p1 = 0, long unsigned p2 =0, long unsigned p3 = 0);
+  CMsg(MsgQueueDelegate d, long unsigned p1 = 0, long unsigned p2 =0, long unsigned p3 = 0);
+  CMsg(MsgQueueDelegate d,void * pthis, long unsigned p2 =0, long unsigned p3 = 0);
+  unsigned      Id() const { return m_id;}
   long unsigned P1() const { return m_p1;}
   long unsigned P2() const { return m_p2;}
   long unsigned P3() const { return m_p3;}
+  bool isDelegate()  const { return m_d != NULL;}
   void Invoke() const { m_d(m_p1,m_p2,m_p3);}
 private:
-  MsgId    m_id ;
-  long unsigned m_p1 ;
-  long unsigned m_p2 ;
-  long unsigned m_p3 ;
-  delegate m_d;
+  unsigned         m_id ;
+  long unsigned    m_p1 ;
+  long unsigned    m_p2 ;
+  long unsigned    m_p3 ;
+  MsgQueueDelegate m_d;
 };
-
-class CMutex;
-class CEvent;
 
 class CMsgQueue
 {
@@ -48,12 +40,13 @@ public:
 	CMsgQueue();
 	~CMsgQueue();
   CItemList m_list ;
-  CMutex  * m_lock;
-  CEvent  * m_notempty;
+  CMutex  m_lock;
+  CEvent  m_notempty;
   void PostMessage(const CMsg & item);
-  void PostMessage(MsgId id, long unsigned p1 = 0, long unsigned p2 = 0, long unsigned p3 = 0);
-  void PostMessage(delegate d,void * pthis, long unsigned p2 = 0, long unsigned p3 = 0);
+  void PostMessage(unsigned id, long unsigned p1 = 0, long unsigned p2 = 0, long unsigned p3 = 0);
+  void PostMessage(MsgQueueDelegate d,void * pthis, long unsigned p2 = 0, long unsigned p3 = 0);
   void GetMessage(CMsg & item);
+  static unsigned CreateMessageId();
 private:
   void PostMessage(CMsg * item);
 };

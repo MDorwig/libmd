@@ -47,6 +47,11 @@ public:
 class CItemList
 {
 public:
+
+  CItemList() : m_list()
+  {
+
+  }
   void AddTail(CListItem & t)
   {
     m_list.AddTail(&m_list,&t);
@@ -92,7 +97,7 @@ public:
 
 };
 
-#define mbroffset(typ,mbr) (((unsigned)(&((typ*)4)->mbr))-4)
+#define mbroffset(typ,mbr) (((long unsigned)(&((typ*)4)->mbr))-4)
 #define fromitem(item,typ,list) (typ*)((char*)item-mbroffset(typ,list))
 
 #define listforeach(item,list) for( item = list->m_next ; item != list ; item = item->m_next)

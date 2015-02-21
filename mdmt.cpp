@@ -7,7 +7,8 @@
 
 #include <string.h>
 #include <time.h>
-#include "mdmt.h"
+#include "msgqueue.h"
+#include "thread.h"
 
 CMutex::CMutex()
 {

@@ -8,18 +8,15 @@
 #ifndef LIBMD_SCEBASE_H_
 #define LIBMD_SCEBASE_H_
 
-
+#include <stdarg.h>
 #include "list.h"
-#include "scetrace.h"
 
 class SceMsg ;
 
 class SceBase
 {
 public:
-		SceBase() ;
-
-		SceBase(SceBase * par,const char * n);
+		SceBase(SceBase * par = NULL,const char * n = "root");
 		virtual ~SceBase();
 
 		virtual int getState() const
@@ -52,6 +49,8 @@ public:
 
 		virtual void exitProcess();
 
+		virtual int Trace(const char * fmt,...) __attribute__((format (printf, 2, 3)));
+
 		CListItem    list;
 
 private:
@@ -62,6 +61,27 @@ private:
 		static int 		nextpid;
 };
 
+typedef int (*TraceDelegate)(void * context,const char * fmt,va_list lst);
+
+class SceDriver
+{
+public:
+  SceDriver();
+
+  ~SceDriver()
+  {
+  }
+  static void SetTraceDelegate(TraceDelegate d,void * context);
+  static void SendSignal(SceMsg * msg);
+  static void OnTimer(int dt);
+  static SceBase * Find(SceBase * val);
+  static void AddProcess(SceBase * proc);
+  static void RemoveProcess(SceBase * proc);
+  static void DispatchMsg(SceMsg * msg);
+  static int  Trace(const char * fmt,...) __attribute__((format (printf, 1, 2)));
+  static int  Trace(const char * fmt,va_list lst);
+};
+
 class SceMsg
 {
 public:
@@ -70,11 +90,11 @@ public:
 		from = src ;
 		to   = dst ;
 		id   = msgid;
-		SCE_TRACE("SceMsg %d created\n",id);
+		SceDriver::Trace("SceMsg %d created\n",id);
 	}
 	~SceMsg()
 	{
-		SCE_TRACE("SceMsg %d destroyed\n",id);
+		SceDriver::Trace("SceMsg %d destroyed\n",id);
 	}
 	SceBase * from;
 	SceBase * to ;
@@ -82,26 +102,6 @@ public:
 	int getId() { return id;}
 };
 
-
-class SceDriver
-{
-public:
-	SceDriver()
-	{
-	}
-
-	~SceDriver()
-	{
-	}
-
-	static void SendSignal(SceMsg * msg);
-	static void OnTimer(int dt);
-	static SceBase * Find(SceBase * val);
-	static void Run(void);
-	static CItemList procs ;
-	static CItemList timers;
-	static SceBase * sceroot;
-};
 
 class SceTimer
 {
@@ -123,6 +123,6 @@ public:
 	CListItem 		list;
 } ;
 
-#include "model/signals.h"
+const char * GetSignalName(int id);
 
 #endif /* LIBMD_SCEBASE_H_ */
