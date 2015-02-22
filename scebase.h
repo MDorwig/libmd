@@ -47,6 +47,11 @@ public:
 			return "" ;
 		}
 
+    virtual const char * getStateName() const
+    {
+      return getStateName(getState()) ;
+    }
+
 		virtual void exitProcess();
 
 		virtual int Trace(const char * fmt,...) __attribute__((format (printf, 2, 3)));

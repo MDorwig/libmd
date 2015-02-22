@@ -113,8 +113,23 @@ void SceDriver::DispatchMsg(SceMsg * m)
 {
   if (Find(m->to) != NULL)
   {
-    Trace("%10d Proess %s send signal %s to %s\n",getTickCount(),m->from->getName(),GetSignalName(m->id),m->to->getName());
-    m->to->Dispatch(m);
+    Trace("%10d Process %s(%d) sends signal %s to Process %s(%d)\n",
+        getTickCount(),
+        m->from->getName(),
+        m->from->getPid(),
+        GetSignalName(m->id),
+        m->to->getName(),
+        m->to->getPid());
+
+    if (m->to->Dispatch(m) == 0)
+    {
+      Trace("%10d Process %s(%d) did not handle signal %s in state %s\n",
+          getTickCount(),
+          m->to->getName(),
+          m->to->getPid(),
+          GetSignalName(m->id),
+          m->to->getStateName());
+    }
     delete m ;
   }
 }

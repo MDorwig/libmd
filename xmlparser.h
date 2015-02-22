@@ -29,30 +29,44 @@ public:
   int          m_utf8cnt;
 };
 
-class xmlAttr
-{
-public:
-  xmlAttr(const string & name,const string & value)
-  {
-    m_name = name ;
-    m_value= value;
-  }
-  string m_name ;
-  string m_value;
-};
+typedef enum {
+    XML_ELEMENT_NODE=   1,
+    XML_ATTRIBUTE_NODE=   2,
+    XML_TEXT_NODE=    3,
+    XML_CDATA_SECTION_NODE= 4,
+    XML_ENTITY_REF_NODE=  5,
+    XML_ENTITY_NODE=    6,
+    XML_PI_NODE=    7,
+    XML_COMMENT_NODE=   8,
+    XML_DOCUMENT_NODE=    9,
+    XML_DOCUMENT_TYPE_NODE= 10,
+    XML_DOCUMENT_FRAG_NODE= 11,
+    XML_NOTATION_NODE=    12,
+    XML_HTML_DOCUMENT_NODE= 13,
+    XML_DTD_NODE=   14,
+    XML_ELEMENT_DECL=   15,
+    XML_ATTRIBUTE_DECL=   16,
+    XML_ENTITY_DECL=    17,
+    XML_NAMESPACE_DECL=   18,
+    XML_XINCLUDE_START=   19,
+    XML_XINCLUDE_END=   20
+} xmlElementType;
 
-#define for_each_attr(attr,node) \
-	xmlAttrPtr attr; \
-	for (xmlAttrIterator item = node->m_attr.begin() ;\
-	item != node->m_attr.end() && (attr = *item) != NULL  ;\
-	item++)
 
+typedef enum {
+    XML_ATTRIBUTE_CDATA = 1,
+    XML_ATTRIBUTE_ID,
+    XML_ATTRIBUTE_IDREF ,
+    XML_ATTRIBUTE_IDREFS,
+    XML_ATTRIBUTE_ENTITY,
+    XML_ATTRIBUTE_ENTITIES,
+    XML_ATTRIBUTE_NMTOKEN,
+    XML_ATTRIBUTE_NMTOKENS,
+    XML_ATTRIBUTE_ENUMERATION,
+    XML_ATTRIBUTE_NOTATION
+} xmlAttributeType;
 
-enum xmlNodeType
-{
-  XML_DECL_NODE,
-  XML_ELEMENT_NODE,
-};
+typedef xmlElementType xmlNsType;
 
 class xmlparserException : public exception
 {
@@ -63,54 +77,62 @@ public:
   char * m_text;
 };
 
-class xmlNode;
-class xmlAttr;
+typedef unsigned char xmlChar;
 
-typedef xmlNode * xmlNodePtr ;
-typedef xmlNode * xmlDocPtr ;
-typedef xmlAttr * xmlAttrPtr ;
-typedef char xmlChar ;
-
-typedef list<xmlNodePtr>::iterator xmlNodeIterator;
-typedef list<xmlAttrPtr>::iterator xmlAttrIterator;
-
-class xmlNode
-{
-public:
-  xmlNode(const string & name,xmlNodeType t)
-  {
-    m_name = name ;
-    m_type = t ;
-    m_parent = NULL;
-  }
-  ~xmlNode()
-  {
-  	for (xmlAttrIterator ai = m_attr.begin() ; ai != m_attr.end() ; ai++)
-  	{
-  		delete *ai ;
-  	}
-  	for (xmlNodeIterator ni = m_children.begin() ; ni != m_children.end() ; ni++)
-  	{
-  		delete *ni ;
-  	}
-  }
-
-  bool hasChildren()  { return m_children.begin() != m_children.end() ; }
-  bool hasAttributes(){ return m_attr.begin() != m_attr.end() ; }
-  xmlNodeType m_type;
-  xmlNode *   m_parent;
-  string      m_name ;
-  string      m_content;
-  list<xmlAttr*> m_attr;
-  list<xmlNode*> m_children;
+typedef struct xmlDoc  *xmlDocPtr;
+typedef struct xmlNode *xmlNodePtr;
+typedef struct xmlAttr *xmlAttrPtr;
+struct xmlAttr {
+    xmlAttr(const char * name,const char * value);
+    ~xmlAttr();
+    xmlElementType   type;
+    const xmlChar   *name;
+    xmlNodePtr children;
+    xmlNodePtr last;
+    xmlNodePtr parent;
+    xmlAttrPtr next;
+    xmlAttrPtr prev;
+    xmlDocPtr  doc;
+    xmlAttributeType atype;
 };
 
-#define for_each_child(child,node) \
-	xmlNodePtr child ;\
-	for (xmlNodeIterator item = node->m_children.begin() ;\
-	     item != node->m_children.end() && (child = *item) != NULL ;\
-	     item++)
 
+typedef class xmlNode *xmlNodePtr;
+struct xmlNode {
+    xmlNode(xmlElementType nt,const char * name);
+    ~xmlNode();
+    void AddAttr(xmlAttrPtr attr);
+    void AddChild(xmlNodePtr child);
+    void          * _private;
+    xmlElementType  type;
+    const xmlChar * name;
+    xmlNodePtr      children;
+    xmlNodePtr      last;
+    xmlNodePtr      parent;
+    xmlNodePtr      next;
+    xmlNodePtr      prev;
+    xmlDocPtr       doc;
+    xmlChar       * content;
+    xmlAttrPtr      properties;
+};
+
+typedef xmlDoc *xmlDocPtr;
+struct xmlDoc {
+    xmlDoc(const char * name);
+    ~xmlDoc();
+    void AddChild(xmlNode * n);
+    void          * _private; /* application data */
+    xmlElementType  type;       /* XML_DOCUMENT_NODE, must be second ! */
+    char          * name; /* name/filename/URI of the document */
+    xmlNodePtr      children;  /* the document tree */
+    xmlNodePtr      last;  /* last child link */
+    xmlNodePtr      parent;  /* child->parent link */
+    xmlNodePtr      next;  /* next sibling link  */
+    xmlNodePtr      prev;  /* previous sibling link  */
+
+    const xmlChar  *version;  /* the XML version string */
+    const xmlChar  *encoding;   /* external initial encoding, if any */
+};
 
 class xmlparser
 {
@@ -167,12 +189,11 @@ public:
   parserstate 	getState();
   void        	pushState(parserstate st);
   parserstate 	popState();
-  void        	completeElement(const char * input);
-  virtual void 	onXmlDecl(xmlNode * decl);
-  virtual void 	onContent(xmlNode * node,const string & content);
-  virtual void 	onElementComplete(xmlNode * node);
-  virtual void 	onDocumentComplete(xmlNode * node);
-  void        	AddNode(xmlNode * n);
+  void        	completeElement(bool checkname,const char * input);
+  virtual void 	onContent(xmlNodePtr node,const string & content);
+  virtual void 	onElementComplete(xmlNodePtr node);
+  virtual void 	onDocumentComplete(xmlDocPtr node);
+  void        	AddNode(xmlNodePtr n);
   xmlscanner  	m_scanner;
   parserstate 	m_state[16] ;
   unsigned    	m_trace:1;
@@ -183,8 +204,8 @@ public:
   int         	m_strdelim ;
   int         	m_charval;
   string 				m_lexval;
-  xmlNode *   	m_root;
-  xmlNode *   	m_curnode;
+  xmlDocPtr   	m_doc;
+  xmlNodePtr  	m_curnode;
 };
 
 

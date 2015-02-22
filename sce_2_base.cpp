@@ -37,7 +37,7 @@ SceBase * SceBase::getRoot()
 
 void SceBase::setState(int st)
 {
-  SceDriver::Trace("Process %s Transition from %s to %s\n",getName(),getStateName(state),getStateName(st));
+  SceDriver::Trace("Process %s Transition from %s to %s\n",getName(),getStateName(),getStateName(st));
   state = st ;
 }
 

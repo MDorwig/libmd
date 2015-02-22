@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <stdarg.h>
+#include <string.h>
 #include "xmlparser.h"
 
 xmlscanner::xmlscanner()
@@ -120,6 +121,115 @@ const char * xmlparserException::what() const throw()
   return m_text ;
 }
 
+xmlAttr::xmlAttr(const char * aname,const char * aval)
+{
+  name = (xmlChar*)strdup(aname);
+  children = new xmlNode(XML_TEXT_NODE,"");
+  children->content = (xmlChar*)strdup(aval);
+  children->parent = parent;
+  children->doc = doc;
+}
+
+xmlAttr::~xmlAttr()
+{
+  delete children;
+  delete name ;
+}
+
+xmlNode::xmlNode(xmlElementType et,const char * en)
+{
+  type = et ;
+  name = (xmlChar*)strdup(en);
+  _private = NULL;
+  children = NULL;
+  last = NULL;
+  parent = NULL;
+  next = NULL;
+  prev = NULL;
+  doc = NULL;
+  content = NULL;
+  properties = NULL;
+}
+
+xmlNode::~xmlNode()
+{
+  for (xmlNodePtr c = children ; c != NULL ;)
+  {
+    xmlNodePtr n = c ;
+    c = c->next ;
+    delete n ;
+  }
+  for (xmlAttrPtr a = properties ; a != NULL ;)
+  {
+    xmlAttrPtr p = a ;
+    a = a->next ;
+    delete p ;
+  }
+  if (name != NULL)
+    delete name ;
+  if (content != NULL)
+    delete content;
+}
+
+void xmlNode::AddAttr(xmlAttrPtr a)
+{
+  a->next = properties;
+  a->parent = this;
+  a->doc  = doc;
+  properties = a ;
+}
+
+void xmlNode::AddChild(xmlNodePtr c)
+{
+  if (children == NULL)
+    children = c ;
+  else
+  {
+    last->next = c ;
+    c->prev = last ;
+  }
+  last = c ;
+  c->parent = this;
+}
+
+xmlDoc::xmlDoc(const char * docname)
+{
+  _private = NULL;
+   type = XML_DOCUMENT_NODE;
+  name = strdup(docname);
+  children = NULL;
+  last = NULL;
+  parent = NULL;
+  next = NULL;
+  prev = NULL;
+  version = NULL;
+  encoding = NULL;
+}
+
+void xmlDoc::AddChild(xmlNode * n)
+{
+  if (children == NULL)
+    children = n ;
+  else
+  {
+    last->next = n ;
+    n->prev = last ;
+  }
+  last = n;
+}
+
+xmlDoc::~xmlDoc()
+{
+  xmlNode * c = children ;
+  while(c != NULL)
+  {
+    xmlNode * n = c ;
+    c = c->next;
+    delete n ;
+  }
+
+}
+
 xmlparser::xmlparser(bool trace)
 {
   m_trace   = trace;
@@ -131,7 +241,7 @@ xmlparser::xmlparser(bool trace)
     m_state[i] = PS_IDLE;
   }
   m_statesp = 0 ;
-  m_root = NULL;
+  m_doc = NULL;
   m_curnode = NULL;
 }
 
@@ -185,16 +295,11 @@ const char * xmlparser::StateName(parserstate st)
   return "PS_UNKNOWN";
 }
 
-void xmlparser::onXmlDecl(xmlNode * decl)
-{
-
-}
-
 void xmlparser::onContent(xmlNode * node,const std::string & content)
 {
-  node->m_content = content ;
+  node->content = (xmlChar*)strdup(content.c_str()) ;
   if (m_trace)
-    printf("element %s = %s\n",node->m_name.c_str(),node->m_content.c_str());
+    printf("element %s = %s\n",node->name,node->content);
 }
 
 void xmlparser::onElementComplete(xmlNode * node)
@@ -202,9 +307,8 @@ void xmlparser::onElementComplete(xmlNode * node)
 
 }
 
-void xmlparser::onDocumentComplete(xmlNode * node)
+void xmlparser::onDocumentComplete(xmlDocPtr doc)
 {
-	m_root = node ;
 }
 
 void xmlparser::setState(parserstate st)
@@ -283,42 +387,65 @@ bool xmlparser::isWhiteSpace(int ch)
   return ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n';
 }
 
-void xmlparser::completeElement(const char * input)
+void xmlparser::completeElement(bool checkname,const char * input)
 {
-  if (m_curnode->m_name.compare(m_ident) == 0)
+  xmlNodePtr n = m_curnode;
+  if (n->type == XML_PI_NODE)
   {
-    onElementComplete(m_curnode);
-    m_curnode = m_curnode->m_parent;
-    popState();
-    if (getState() != PS_OPENTAG)
-      throw xmlparserException("parse error in state %s near %s\n",StateName(getState()),input);
-    if (m_curnode == NULL || m_curnode->m_type == XML_DECL_NODE)
+    for (xmlAttrPtr a = n->properties ; a != NULL ; a = a->next)
     {
-      onDocumentComplete(m_curnode);
-      m_root = m_curnode = NULL;
+      if (strcmp((char*)a->name,"version") == 0)
+        m_doc->version = (xmlChar*)strdup((char*)a->children->content);
+      else if (strcmp((char*)a->name,"encoding") == 0)
+        m_doc->encoding = (xmlChar*)strdup((char*)a->children->content);
     }
+    m_curnode = n->parent;
+    delete n;
     setState(PS_IDLE);
   }
   else
   {
-    throw xmlparserException("%s does not match %s\n",m_ident.c_str(),m_curnode->m_name.c_str());
+    if (!checkname || strcmp((char*)n->name,m_ident.c_str()) == 0)
+    {
+      onElementComplete(n);
+      m_curnode = n->parent;
+      if (m_statesp > 0)
+      {
+        popState();
+        if (getState() != PS_OPENTAG)
+          throw xmlparserException("parse error in state %s near %s\n",StateName(getState()),input);
+      }
+      if (m_curnode == NULL && n->type != XML_PI_NODE)
+      {
+        onDocumentComplete(m_doc);
+        delete m_doc ;
+        m_doc = NULL;
+      }
+      setState(PS_IDLE);
+    }
+    else
+    {
+      throw xmlparserException("%s does not match %s\n",m_ident.c_str(),m_curnode->name);
+    }
   }
 }
 
 void xmlparser::AddNode(xmlNode * n)
 {
-	if (m_curnode == NULL)
-	{
-		if (n->m_type == XML_DECL_NODE)
-		{
-			m_curnode = n ;
-			return ;
-		}
-		m_curnode = new xmlNode("xml",XML_DECL_NODE);
-		m_curnode->m_attr.push_back(new xmlAttr("version","1.0"));
-	}
-	m_curnode->m_children.push_back(n);
-	n->m_parent = m_curnode ;
+  if (m_doc == NULL)
+    m_doc = new xmlDoc("doc");
+  n->doc = m_doc;
+  if (n->type != XML_PI_NODE)
+  {
+    if (m_curnode == NULL)
+      m_doc->AddChild(n);
+    else
+      m_curnode->AddChild(n);
+  }
+  else
+  {
+    n->parent = m_curnode ;
+  }
   m_curnode = n ;
 }
 
@@ -418,8 +545,9 @@ restart:
           switch(popState())
           {
             case PS_XMLDECL:
-              onXmlDecl(m_curnode);
-              setState(PS_IDLE);
+            {
+              completeElement(false,*input);
+            }
             break ;
             default:
             break ;
@@ -469,7 +597,8 @@ restart:
              case PS_XMLDECL:
               if (m_ident == "xml")
               {
-                AddNode(new xmlNode(m_ident,XML_DECL_NODE));
+                xmlNodePtr n = new xmlNode(XML_PI_NODE,m_ident.c_str());
+                AddNode(n);
                 pushState(PS_ATTR_LIST);
                 goto restart;
               }
@@ -484,7 +613,7 @@ restart:
 
             case  PS_START_TAG:
             {
-              xmlNode * n = new xmlNode(m_ident,XML_ELEMENT_NODE);
+              xmlNode * n = new xmlNode(XML_ELEMENT_NODE,m_ident.c_str());
               AddNode(n);
               pushState(PS_ATTR_LIST);
             }
@@ -493,11 +622,11 @@ restart:
             case PS_END_TAG:
               if (ch == '>')
               {
-                completeElement(*input);
+                completeElement(true,*input);
               }
               else if (!isWhiteSpace(ch))
               {
-                throw xmlparserException("'>' expected in after \"%s\"\n",m_curnode->m_name.c_str());
+                throw xmlparserException("'>' expected in after \"%s\"\n",m_curnode->name);
               }
             break ;
 
@@ -511,11 +640,11 @@ restart:
       case  PS_END_TAG:
         if (ch == '>')
         {
-          completeElement(*input);
+          completeElement(true,*input);
         }
         else
         {
-          throw xmlparserException("'>' expected in after \"%s\"\n",m_curnode->m_name.c_str());
+          throw xmlparserException("'>' expected in after \"%s\"\n",m_curnode->name);
         }
       break ;
 
@@ -540,11 +669,11 @@ restart:
         	{
         		if (popState() == PS_OPENTAG)
         		{
-        			m_ident = m_curnode->m_name;
+        			m_ident = (char*)m_curnode->name;
         		}
         		pushState(getState());
         	}
-          completeElement(*input);
+          completeElement(false,*input);
           setState(PS_IDLE);
         }
         else
@@ -612,8 +741,8 @@ restart:
         {
           if (popState() == PS_ATTR_VALUE)
           {
-            xmlAttr * a = new xmlAttr(m_ident,m_lexval);
-            m_curnode->m_attr.push_back(a);
+            xmlAttrPtr a = new xmlAttr(m_ident.c_str(),m_lexval.c_str());
+            m_curnode->AddAttr(a);
             popState();
           }
         }
