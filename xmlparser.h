@@ -134,6 +134,7 @@ struct xmlDoc {
     const xmlChar  *encoding;   /* external initial encoding, if any */
 };
 
+#define BAD_CAST (xmlChar *)
 class xmlparser
 {
 public:
@@ -192,7 +193,11 @@ public:
   void        	completeElement(bool checkname,const char * input);
   virtual void 	onContent(xmlNodePtr node,const string & content);
   virtual void 	onElementComplete(xmlNodePtr node);
-  virtual void 	onDocumentComplete(xmlDocPtr node);
+  virtual xmlDocPtr	onDocumentComplete(xmlDocPtr doc);
+  /*
+   * returnvalue : if onDocumentComplete returns NULL the current xmlDoc is not deleted
+   *               if onDocumentComplete returns doc  the xmlDoc is deleted
+   */
   void        	AddNode(xmlNodePtr n);
   xmlscanner  	m_scanner;
   parserstate 	m_state[16] ;

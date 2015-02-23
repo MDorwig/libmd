@@ -297,9 +297,13 @@ const char * xmlparser::StateName(parserstate st)
 
 void xmlparser::onContent(xmlNode * node,const std::string & content)
 {
-  node->content = (xmlChar*)strdup(content.c_str()) ;
+	xmlNodePtr txt = new xmlNode(XML_TEXT_NODE,"text");
+  txt->content = (xmlChar*)strdup(content.c_str()) ;
+  txt->parent = node ;
+  txt->doc    = node->doc;
+  node->AddChild(txt);
   if (m_trace)
-    printf("element %s = %s\n",node->name,node->content);
+    printf("element %s = %s\n",node->name,txt->content);
 }
 
 void xmlparser::onElementComplete(xmlNode * node)
@@ -307,8 +311,9 @@ void xmlparser::onElementComplete(xmlNode * node)
 
 }
 
-void xmlparser::onDocumentComplete(xmlDocPtr doc)
+xmlDocPtr xmlparser::onDocumentComplete(xmlDocPtr doc)
 {
+	return doc ;
 }
 
 void xmlparser::setState(parserstate st)
@@ -417,8 +422,8 @@ void xmlparser::completeElement(bool checkname,const char * input)
       }
       if (m_curnode == NULL && n->type != XML_PI_NODE)
       {
-        onDocumentComplete(m_doc);
-        delete m_doc ;
+        if (onDocumentComplete(m_doc) != NULL)
+        	delete m_doc ;
         m_doc = NULL;
       }
       setState(PS_IDLE);

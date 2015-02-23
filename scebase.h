@@ -80,11 +80,19 @@ public:
   static void SendSignal(SceMsg * msg);
   static void OnTimer(int dt);
   static SceBase * Find(SceBase * val);
+  static SceBase * getFist();
+  static SceBase * getNext(SceBase * b);
   static void AddProcess(SceBase * proc);
   static void RemoveProcess(SceBase * proc);
   static void DispatchMsg(SceMsg * msg);
   static int  Trace(const char * fmt,...) __attribute__((format (printf, 1, 2)));
   static int  Trace(const char * fmt,va_list lst);
+protected:
+  CItemList procs ;
+  CItemList timers;
+  TraceDelegate tracefunc;
+  void        * tracecontext;
+  static SceDriver driver;
 };
 
 class SceMsg

@@ -40,11 +40,6 @@ public:
   unsigned  sce_msgid;
 };
 
-static CItemList procs ;
-static CItemList timers;
-static TraceDelegate tracefunc;
-static void        * tracecontext;
-static SceDriver   scedriver;
 static SceDriverThread * scedriverthread;
 
 SceDriver::SceDriver()
@@ -59,24 +54,24 @@ void SceDriver::SendSignal(SceMsg * msg)
 
 void SceDriver::AddProcess(SceBase * proc)
 {
-  procs.AddTail(proc->list);
+  driver.procs.AddTail(proc->list);
 }
 
 void SceDriver::RemoveProcess(SceBase * proc)
 {
-  procs.Remove(proc->list);
+  driver.procs.Remove(proc->list);
 }
 
 void SceDriver::SetTraceDelegate(TraceDelegate d,void * context)
 {
-  tracefunc = d ;
-  tracecontext = context;
+  driver.tracefunc = d ;
+  driver.tracecontext = context;
 }
 
 SceBase * SceDriver::Find(SceBase * val)
 {
   CListItem * item ;
-  listforeach(item,(&procs.m_list))
+  listforeach(item,(&driver.procs.m_list))
   {
     SceBase * s = fromitem(item,SceBase,list);
     if (s == val)
@@ -85,14 +80,34 @@ SceBase * SceDriver::Find(SceBase * val)
   return NULL;
 }
 
+SceBase * SceDriver::getFist()
+{
+	SceBase * b = NULL;
+	CListItem * item = driver.procs.GetHead();
+	if (item != NULL)
+	{
+		b = fromitem(item,SceBase,list);
+	}
+	return b ;
+}
+
+SceBase * SceDriver::getNext(SceBase * b)
+{
+	SceBase * n = NULL;
+	CListItem * item = driver.procs.GetNext(&b->list);
+	if (item != NULL)
+		n = fromitem(item,SceBase,list);
+	return n ;
+}
+
 int  SceDriver::Trace(const char * fmt,...)
 {
   int i = 0 ;
-  if (tracefunc != NULL)
+  if (driver.tracefunc != NULL)
   {
     va_list lst ;
     va_start(lst,fmt);
-    i = tracefunc(tracecontext,fmt,lst);
+    i = driver.tracefunc(driver.tracecontext,fmt,lst);
     va_end(lst);
   }
   return i ;
@@ -101,9 +116,9 @@ int  SceDriver::Trace(const char * fmt,...)
 int  SceDriver::Trace(const char * fmt,va_list lst)
 {
   int i = 0 ;
-  if (tracefunc != NULL)
+  if (driver.tracefunc != NULL)
   {
-    i = tracefunc(tracecontext,fmt,lst);
+    i = driver.tracefunc(driver.tracecontext,fmt,lst);
   }
   return i ;
 }

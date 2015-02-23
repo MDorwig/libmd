@@ -12,6 +12,7 @@
 
 int SceBase::nextpid;
 
+SceDriver SceDriver::driver;
 static SceBase   sceroot;
 
 #if 0
