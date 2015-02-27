@@ -5,13 +5,13 @@
  *      Author: dorwig
  */
 #include <stdio.h>
-#include "mdmt.h"
+#include "msgqueue.h"
 
 CMsg::CMsg()
 {
 }
 
-CMsg::CMsg(MsgId   id,long unsigned p1,long unsigned p2,long unsigned p3)
+CMsg::CMsg(unsigned id,long unsigned p1,long unsigned p2,long unsigned p3)
 {
   m_id = id ;
   m_p1 = p1 ;
@@ -20,9 +20,9 @@ CMsg::CMsg(MsgId   id,long unsigned p1,long unsigned p2,long unsigned p3)
   m_d  = NULL;
 }
 
-CMsg::CMsg(delegate d,void * p1,long unsigned p2,long unsigned p3)
+CMsg::CMsg(MsgQueueDelegate d,void * p1,long unsigned p2,long unsigned p3)
 {
-  m_id = MSG_INVOKE;
+  m_id = 0;
   m_p1 = (long unsigned)p1 ;
   m_p2 = p2 ;
   m_p3 = p3 ;
@@ -30,10 +30,23 @@ CMsg::CMsg(delegate d,void * p1,long unsigned p2,long unsigned p3)
 }
 
 
+CMsgQueue::CMsgQueue()
+{
+}
+
+CMsgQueue::~CMsgQueue()
+{
+}
+
+unsigned CMsgQueue::CreateMessageId()
+{
+  static unsigned nextmsgid ;
+  return ++nextmsgid;
+}
+
 void CMsgQueue::PostMessage(CMsg * msg)
 {
   m_lock.Lock();
-  printf("Add Msg %d\n",msg->Id());
   m_list.AddTail(*msg);
   m_lock.Release();
   m_notempty.Set();
@@ -45,13 +58,13 @@ void CMsgQueue::PostMessage(const CMsg & item)
   PostMessage(msg);
 }
 
-void CMsgQueue::PostMessage(MsgId id,long unsigned p1,long unsigned p2,long unsigned p3)
+void CMsgQueue::PostMessage(unsigned id,long unsigned p1,long unsigned p2,long unsigned p3)
 {
   CMsg * msg = new CMsg(id,p1,p2,p3);
   PostMessage(msg);
 }
 
-void CMsgQueue::PostMessage(delegate d,void * pthis,long unsigned p2,long unsigned p3)
+void CMsgQueue::PostMessage(MsgQueueDelegate d,void * pthis,long unsigned p2,long unsigned p3)
 {
   CMsg * msg = new CMsg(d,pthis,p2,p3);
   PostMessage(msg);
@@ -73,7 +86,7 @@ void CMsgQueue::GetMessage(CMsg & msg)
       }
       m_list.Remove(*m);
       m_lock.Release();
-      if (m->Id() != MSG_INVOKE)
+      if (!m->isDelegate())
       {
           msg = *m ;
           delete m ;
@@ -82,5 +95,4 @@ void CMsgQueue::GetMessage(CMsg & msg)
       m->Invoke();
       delete m ;
   }
-  printf("Get Msg %d\n",msg.Id());
 }
