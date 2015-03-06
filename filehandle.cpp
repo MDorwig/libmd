@@ -10,7 +10,7 @@
 
 class CFileHandleList
 {
-public:	
+public:
 	CFileHandleList();
 	~CFileHandleList();
 	void					Lock();
@@ -22,7 +22,7 @@ public:
 	int 					Find(CFileHandle * pfh);
 	CFileHandle * FindFd(int fd);
 	int						GetCount() { return m_count;}
-private:	
+private:
 	CFileHandle * 	m_first;
 	CFileHandle * 	m_last ;
 	int							m_count;
@@ -31,22 +31,21 @@ private:
 
 static CFileHandleList filehandles ;
 struct epoll_event CFileHandle::m_pollmap[256];
+int CFileHandle::m_epollfd;
 
 pthread_t fhworker;
 
 CEvent FileHandleListEvent ;
-
-static int epollfd;
 
 
 void * CFileHandle::WorkerThread(void * p)
 {
 	int res ;
 	CFileHandle * pfh ;
-	if (epollfd == 0)
+	if (m_epollfd == 0)
 	{
-		epollfd = epoll_create(sizeof m_pollmap/sizeof m_pollmap[0]);
-		if (epollfd == -1)
+		m_epollfd = epoll_create(sizeof m_pollmap/sizeof m_pollmap[0]);
+		if (m_epollfd == -1)
 		{
 			perror("epoll_create");
 			return NULL;
@@ -54,7 +53,7 @@ void * CFileHandle::WorkerThread(void * p)
 	}
 	while(1)
 	{
-		res = epoll_wait(epollfd,m_pollmap,sizeof m_pollmap/sizeof m_pollmap[0],-1);
+		res = epoll_wait(m_epollfd,m_pollmap,sizeof m_pollmap/sizeof m_pollmap[0],-1);
 		if (res > 0)
 		{
 			for (int i = 0 ; i < res ; i++)
@@ -122,7 +121,7 @@ void CFileHandleList::AddTail(CFileHandle * pfh)
 	if (fhworker == 0)
 		InitFileHandleWorker();
 	if (m_first == NULL)
-		
+
 		m_first = pfh ;
 	else
 	{
@@ -216,7 +215,11 @@ int CFileHandle::SetFlags(int flags)
 
 int CFileHandle::EPollDel()
 {
-	return epoll_ctl(epollfd,EPOLL_CTL_DEL,m_fd,&m_epoll);
+	int res ;
+	m_epoll.data.ptr = NULL;
+	m_epoll.events   = 0;
+	res = epoll_ctl(m_epollfd,EPOLL_CTL_DEL,m_fd,&m_epoll);
+	return res ;
 }
 
 int CFileHandle::EPollAdd(int events)
@@ -225,17 +228,17 @@ int CFileHandle::EPollAdd(int events)
 	if (m_epoll.data.ptr == NULL)
 	{
 		m_epoll.data.ptr = this ;
-		m_epoll.events   = events|EPOLLET; 
-		if (epollfd == 0)
+		m_epoll.events   = events|EPOLLET;
+		if (m_epollfd == 0)
 		{
-			epollfd = epoll_create(sizeof m_pollmap/sizeof m_pollmap[0]);
-			if (epollfd == -1)
+			m_epollfd = epoll_create(sizeof m_pollmap/sizeof m_pollmap[0]);
+			if (m_epollfd == -1)
 			{
 				perror("epoll_create");
 				return -1;
 			}
 		}
-		res = epoll_ctl(epollfd,EPOLL_CTL_ADD,m_fd,&m_epoll);
+		res = epoll_ctl(m_epollfd,EPOLL_CTL_ADD,m_fd,&m_epoll);
 	}
 	return res ;
 }
@@ -243,9 +246,18 @@ int CFileHandle::EPollAdd(int events)
 int CFileHandle::EPollMod(int events)
 {
 	m_epoll.events = events|EPOLLET;
-	return epoll_ctl(epollfd,EPOLL_CTL_MOD,m_fd,&m_epoll);
+	return epoll_ctl(m_epollfd,EPOLL_CTL_MOD,m_fd,&m_epoll);
 }
 
+void CFileHandle::TakeOver(CFileHandle * other)
+{
+	m_fd = other->m_fd;
+	m_epoll.data.ptr = this;
+	EPollMod(other->m_epoll.events);
+	other->m_epoll.data.ptr = NULL;
+	other->m_epoll.events = 0 ;
+	other->m_fd = -1;
+}
 
 int	CFileHandle::Open(const char * name,int flags)
 {

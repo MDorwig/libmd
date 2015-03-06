@@ -24,7 +24,7 @@ enum sktstates
 
 class CAsyncSocket : public CFileHandle
 {
-public:	
+public:
 								CAsyncSocket();
 	virtual 			~CAsyncSocket();
 	int						Create(int port,int type,int events = FD_READ|FD_WRITE|FD_OOB|FD_ACCEPT|FD_CONNECT|FD_CLOSE);
@@ -34,8 +34,8 @@ public:
 	void					OnPollIn();
 	void					OnPollOut();
 	virtual void  OnEvent(int event,int nerr);
-	virtual	void 	OnConnect(int nerr);	
-	virtual	void 	OnAccept(int nerr);	
+	virtual	void 	OnConnect(int nerr);
+	virtual	void 	OnAccept(int nerr);
 	virtual	void 	OnClose(int nerr);
 	virtual void 	OnReceive(int nerr);
 	virtual void 	OnSend(int nErrorCode);
@@ -44,6 +44,7 @@ public:
 	void					Dispatch(int events,int nerr);
 	int						Listen(int backlog);
 	int						Bind(const struct sockaddr * sa,socklen_t salen);
+	int						Bind(int port);
 	int						Accept(CAsyncSocket & accskt,struct sockaddr * sa,socklen_t * salen);
 	int						Connect(struct sockaddr * sa,socklen_t salen);
 	int						Connect(const char * host,int port);
@@ -52,9 +53,13 @@ public:
 	int						GetLastError() { return m_lasterror;}
 	int						SetOption(int name,int value);
 	int						GetOption(int name,int & value);
-private:	
+	sktstates     State() { return m_state;}
+	void          State(sktstates st) { m_state = st;}
+	int						GetName(struct sockaddr * sa,socklen_t * salen);
+	struct sockaddr_in m_peer;
+private:
 	void					SetLastError(int nerr) { m_lasterror = nerr;}
-protected:	
+protected:
 	int 			m_type ;
 	int				m_port ;
 	int 			m_lasterror;
