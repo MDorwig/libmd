@@ -36,7 +36,7 @@ public:
     list->m_next = item ;
   }
 
-  static void Remove(CListItem * list,CListItem * item)
+  static void Remove(CListItem * item)
   {
     item->m_prev->m_next = item->m_next;
     item->m_next->m_prev = item->m_prev;
@@ -64,7 +64,7 @@ public:
 
   void Remove(CListItem & t)
   {
-    m_list.Remove(&m_list,&t);
+    m_list.Remove(&t);
   }
 
   CListItem * GetHead()

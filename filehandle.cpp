@@ -130,7 +130,6 @@ void CFileHandleList::AddTail(CFileHandle * pfh)
 	}
 	m_last = pfh ;
 	m_count++;
-	printf("%d handles\n",m_count);
 	Unlock();
 }
 
@@ -176,7 +175,6 @@ void CFileHandleList::Remove(CFileHandle * pfh)
 	if (pfh->m_prev != NULL)
 			pfh->m_prev->m_next = pfh->m_next;
 	m_count--;
-	printf("%d handles\n",m_count);
 	Unlock();
 }
 

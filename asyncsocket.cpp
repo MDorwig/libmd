@@ -151,9 +151,9 @@ int	CAsyncSocket::Accept(CAsyncSocket & accskt,struct sockaddr * sa,socklen_t * 
 	{
 		accskt.m_type  		= m_type;
 		accskt.m_port     = m_port;
-		accskt.m_eventmask= m_eventmask & ~FD_CONNECT;
 		accskt.m_state 		= SKT_CONNECTED;
-		accskt.Attach(res,accskt.m_epoll.events) ;
+		accskt.Attach(res,0) ;
+		accskt.AsyncSelect(m_eventmask);
 	}
 	else
 	{
@@ -245,7 +245,7 @@ void CAsyncSocket::Dispatch(int events,int nerr)
 
 #define CASETXT(x)	case x : return #x
 
-static const char * StateName(sktstates st)
+const char * CAsyncSocket::StateName(sktstates st)
 {
 	switch(st)
 	{
@@ -261,14 +261,14 @@ static const char * StateName(sktstates st)
 
 void CAsyncSocket::OnPollErr()
 {
-	printf("POLLERR in state %s\n",StateName(m_state));
+	//printf("POLLERR in state %s\n",StateName(m_state));
 	OnEvent(FD_CLOSE,0);
 }
 
 void CAsyncSocket::OnPollHup()
 {
 	int nerr = 0;
-	printf("POLLHUP in state %s\n",StateName(m_state));
+	//printf("POLLHUP in state %s\n",StateName(m_state));
 	switch(m_state)
 	{
 		case SKT_CONNECTED:
@@ -315,7 +315,7 @@ void CAsyncSocket::OnPollIn()
 		break ;
 
 		default:
-			printf("POLLIN in state %s\n",StateName(m_state));
+			//printf("POLLIN in state %s\n",StateName(m_state));
 		break ;
 	}
 }
@@ -339,7 +339,7 @@ void CAsyncSocket::OnPollOut()
 		break;
 
 		default:
-			printf("POLLOUT in state %s\n",StateName(m_state));
+			//printf("POLLOUT in state %s\n",StateName(m_state));
 		break ;
 	}
 }

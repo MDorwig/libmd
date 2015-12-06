@@ -56,6 +56,7 @@ public:
 	sktstates     State() { return m_state;}
 	void          State(sktstates st) { m_state = st;}
 	int						GetName(struct sockaddr * sa,socklen_t * salen);
+	static const char * StateName(sktstates st);
 	struct sockaddr_in m_peer;
 private:
 	void					SetLastError(int nerr) { m_lasterror = nerr;}
