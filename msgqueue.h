@@ -8,7 +8,7 @@
 #ifndef MSGQUEUE_H_
 #define MSGQUEUE_H_
 
-#include "list.h"
+#include "itemlist.h"
 #include "mdmt.h"
 
 typedef void (*MsgQueueDelegate)(unsigned long p1,unsigned p2,unsigned p3);

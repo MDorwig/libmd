@@ -5,8 +5,8 @@
  *      Author: dorwig
  */
 
-#ifndef LIST_H_
-#define LIST_H_
+#ifndef ITEMLIST_H_
+#define ITEMLIST_H_
 
 #include <stddef.h>
 
@@ -104,4 +104,4 @@ public:
 
 
 
-#endif /* LIST_H_ */
+#endif /* ITEMLIST_H_ */
