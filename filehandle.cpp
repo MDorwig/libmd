@@ -64,15 +64,15 @@ void * CFileHandle::WorkerThread(void * p)
 					pfh = (CFileHandle*)pfd->data.ptr;
 					if (pfh != NULL)
 					{
-						if (pfd->events & POLLHUP)
+						if (pfd->events & EPOLLHUP)
 							pfh->OnPollHup();
-						else if (pfd->events & POLLERR)
+						else if (pfd->events & EPOLLERR)
 							pfh->OnPollErr();
 						else
 						{
-							if (pfd->events & POLLIN)
+							if (pfd->events & EPOLLIN)
 								pfh->OnPollIn();
-							if (pfd->events & POLLOUT)
+							if (pfd->events & EPOLLOUT)
 								pfh->OnPollOut();
 						}
 					}
