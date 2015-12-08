@@ -55,7 +55,7 @@ class CTimer
 };
 
 #include "msgqueue.h"
-
+/*
 class CThread
 {
 public:
@@ -68,5 +68,5 @@ private:
   pthread_t m_id ;
   CMsgQueue m_msgqueue;
 };
-
+*/
 #endif /* MDMT_H_ */
