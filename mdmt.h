@@ -54,4 +54,19 @@ class CTimer
 
 };
 
+#include "msgqueue.h"
+
+class CThread
+{
+public:
+  CThread(const char * name);
+  void       Create();
+  virtual void Main();
+private:
+  static void * Run(void * arg);
+  char *    m_name;
+  pthread_t m_id ;
+  CMsgQueue m_msgqueue;
+};
+
 #endif /* MDMT_H_ */
