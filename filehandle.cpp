@@ -285,7 +285,10 @@ int	CFileHandle::Write(const void * data,size_t size)
 
 int CFileHandle::Read(void * data,size_t size)
 {
-	return read(m_fd,data,size);
+	int n = read(m_fd,data,size);
+	if (n != -1)
+	  SetPollMask(EPOLLIN);
+	return n ;
 }
 
 int CFileHandle::Ioctl(int request,void * argp)
