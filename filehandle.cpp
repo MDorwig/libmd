@@ -287,7 +287,7 @@ int CFileHandle::Read(void * data,size_t size)
 {
 	int n = read(m_fd,data,size);
 	if (n != -1)
-	  SetPollMask(EPOLLIN);
+	  SetPollMask(GetPollMask()|EPOLLIN);
 	return n ;
 }
 
