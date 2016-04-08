@@ -135,6 +135,48 @@ struct xmlDoc {
 };
 
 #define BAD_CAST (xmlChar *)
+
+class utf8string : public string
+{
+public:
+
+  basic_string & operator = (const char * s)
+  {
+    return string::operator = (s);
+  }
+
+  basic_string & operator = (int ch)
+  {
+    string::clear();
+    return operator += (ch);
+  }
+
+  basic_string & operator += (int ch)
+  {
+    if (ch < 0x80)
+      string::operator +=((char)ch);
+    else if (ch <= 0x7ff)
+    {
+      string::operator +=(0xc0 | ((ch >> 6) & 0x1f));
+      string::operator +=(0x80 | ((ch >> 0) & 0x3f));
+    }
+    else if (ch <= 0xffff)
+    {
+      string::operator +=(0xe0 | ((ch >> 12) & 0x0f));
+      string::operator +=(0x80 | ((ch >>  6) & 0x3f));
+      string::operator +=(0x80 | ((ch >>  0) & 0x3f));
+    }
+    else
+    {
+      string::operator +=(0xf0 | ((ch >> 18) & 0x07));
+      string::operator +=(0x80 | ((ch >> 12) & 0x3f));
+      string::operator +=(0x80 | ((ch >>  6) & 0x3f));
+      string::operator +=(0x80 | ((ch >>  0) & 0x3f));
+    }
+    return *this;
+  }
+};
+
 class xmlparser
 {
 public:
@@ -204,11 +246,11 @@ public:
   unsigned    	m_trace:1;
   unsigned    	m_skipws:1;
   int         	m_statesp;
-  string 				m_ident;
-  string 				m_attrval;
+  utf8string  	m_ident;
+  utf8string  	m_attrval;
   int         	m_strdelim ;
   int         	m_charval;
-  string 				m_lexval;
+  utf8string		m_lexval;
   xmlDocPtr   	m_doc;
   xmlNodePtr  	m_curnode;
 };

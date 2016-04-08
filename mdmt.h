@@ -55,7 +55,7 @@ class CTimer
 };
 
 #include "msgqueue.h"
-/*
+
 /*
 class CThread
 {
