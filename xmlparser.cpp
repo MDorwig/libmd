@@ -6,7 +6,6 @@
  */
 
 #include <stdio.h>
-#include <assert.h>
 #include <stdarg.h>
 #include <string.h>
 #include "xmlparser.h"
@@ -426,8 +425,10 @@ void xmlparser::completeElement(bool checkname,const char * input)
       if (m_curnode == NULL && n->type != XML_PI_NODE)
       {
         if (onDocumentComplete(m_doc) != NULL)
+        {
         	delete m_doc ;
-        m_doc = NULL;
+          m_doc = NULL;
+        }
       }
       setState(PS_IDLE);
     }

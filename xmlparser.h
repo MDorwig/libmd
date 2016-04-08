@@ -9,6 +9,7 @@
 #define XMLPARSER_H_
 
 #include <string>
+#include <assert.h>
 #include <list>
 
 using namespace std;
@@ -167,12 +168,16 @@ public:
       string::operator +=(0x80 | ((ch >>  6) & 0x3f));
       string::operator +=(0x80 | ((ch >>  0) & 0x3f));
     }
-    else
+    else if (ch <= 0x1fffff)
     {
       string::operator +=(0xf0 | ((ch >> 18) & 0x07));
       string::operator +=(0x80 | ((ch >> 12) & 0x3f));
       string::operator +=(0x80 | ((ch >>  6) & 0x3f));
       string::operator +=(0x80 | ((ch >>  0) & 0x3f));
+    }
+    else
+    {
+      assert(false);
     }
     return *this;
   }
