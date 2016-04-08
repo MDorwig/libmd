@@ -51,4 +51,5 @@ private:
   void PostMessage(CMsg * item);
 };
 
+
 #endif /* MSGQUEUE_H_ */

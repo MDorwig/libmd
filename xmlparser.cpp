@@ -389,7 +389,7 @@ bool xmlparser::isNameChar(int ch)
 
 bool xmlparser::isWhiteSpace(int ch)
 {
-  return ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n';
+  return ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n' || ch == 0xfeff;
 }
 
 void xmlparser::completeElement(bool checkname,const char * input)
