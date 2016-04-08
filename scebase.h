@@ -9,7 +9,8 @@
 #define LIBMD_SCEBASE_H_
 
 #include <stdarg.h>
-#include "list.h"
+
+#include "itemlist.h"
 
 class SceMsg ;
 

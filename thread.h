@@ -15,6 +15,7 @@ class CThread
 {
 public:
   CThread(const char * name);
+  virtual ~CThread() {}
   void       Create();
   virtual void Main();
 protected:

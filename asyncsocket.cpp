@@ -17,13 +17,13 @@ void CAsyncSocket::OnConnect(int nerr)
 {
 }
 
-void CAsyncSocket::OnAccept(int nerr)	
+void CAsyncSocket::OnAccept(int nerr)
 {
 }
 
 void CAsyncSocket::OnClose(int nerr)
 {
-	Close(); 
+	Close();
 }
 
 void CAsyncSocket::OnReceive(int nerr)
@@ -47,6 +47,11 @@ int CAsyncSocket::GetOption(int name,int & value)
 	if (res == -1)
 		SetLastError(errno);
 	return res ;
+}
+
+int CAsyncSocket::GetName(struct sockaddr * sa,socklen_t * salen)
+{
+	return getsockname(GetHandle(),sa,salen);
 }
 
 int CAsyncSocket::Create(int port,int type,int events)
@@ -90,16 +95,16 @@ void CAsyncSocket::AsyncSelect(int events)
 	int pm = 0 ;
 	m_eventmask = events;
 	if (events & (FD_READ|FD_ACCEPT))
-		pm |= POLLIN;
+		pm |= EPOLLIN;
 	if (events & (FD_WRITE|FD_CONNECT))
-		pm |= POLLOUT;
+		pm |= EPOLLOUT;
 	SetPollMask(pm);
 	//ClrPollMask(~pm);
 }
 
 CAsyncSocket::~CAsyncSocket()
 {
-	
+
 }
 
 int CAsyncSocket::Listen(int backlog)
@@ -127,6 +132,17 @@ int	CAsyncSocket::Bind(const struct sockaddr * sa,socklen_t salen)
 	return res ;
 }
 
+int	CAsyncSocket::Bind(int port)
+{
+	struct sockaddr_in sain;
+	socklen_t salen	;
+	sain.sin_addr.s_addr = INADDR_ANY;
+	sain.sin_family = AF_INET;
+	sain.sin_port   = htons(port);
+	salen = sizeof sain;
+	return Bind((struct sockaddr*)&sain,salen);
+}
+
 int	CAsyncSocket::Accept(CAsyncSocket & accskt,struct sockaddr * sa,socklen_t * salen)
 {
 	int res ;
@@ -135,16 +151,15 @@ int	CAsyncSocket::Accept(CAsyncSocket & accskt,struct sockaddr * sa,socklen_t * 
 	{
 		accskt.m_type  		= m_type;
 		accskt.m_port     = m_port;
-		accskt.m_eventmask= m_eventmask & ~FD_CONNECT;
 		accskt.m_state 		= SKT_CONNECTED;
 		accskt.Attach(res,0) ;
-		accskt.AsyncSelect(accskt.m_eventmask);
+		accskt.AsyncSelect(m_eventmask);
 	}
 	else
 	{
 		SetLastError(errno);
 	}
-	SetPollMask(POLLIN);
+	SetPollMask(EPOLLIN);
 	return res ;
 }
 
@@ -187,6 +202,8 @@ int CAsyncSocket::Receive(void * buf,size_t size,int flags)
 		SetLastError(errno);
 	else if (res == 0)
 		OnEvent(FD_CLOSE,0);
+	else
+	  SetPollMask(GetPollMask()|EPOLLIN);
 	return res ;
 }
 
@@ -196,7 +213,7 @@ int CAsyncSocket::Send(const void * buf,size_t size,int flags)
 	if (res == -1)
 		SetLastError(errno);
 	else
-		SetPollMask(GetPollMask()|POLLOUT);
+		SetPollMask(GetPollMask()|EPOLLOUT);
 	return res ;
 }
 
@@ -228,9 +245,9 @@ void CAsyncSocket::Dispatch(int events,int nerr)
 		OnClose(nerr);
 }
 
-#define CASETXT(x)	case x : return #x 
+#define CASETXT(x)	case x : return #x
 
-static const char * StateName(sktstates st)
+const char * CAsyncSocket::StateName(sktstates st)
 {
 	switch(st)
 	{
@@ -246,27 +263,27 @@ static const char * StateName(sktstates st)
 
 void CAsyncSocket::OnPollErr()
 {
-	printf("POLLERR in state %s\n",StateName(m_state));
+	//printf("EPOLLERR in state %s\n",StateName(m_state));
 	OnEvent(FD_CLOSE,0);
 }
 
 void CAsyncSocket::OnPollHup()
 {
 	int nerr = 0;
-	printf("POLLHUP in state %s\n",StateName(m_state));
+	//printf("EPOLLHUP in state %s\n",StateName(m_state));
 	switch(m_state)
 	{
 		case SKT_CONNECTED:
 			OnEvent(FD_CLOSE,0);
 		break ;
-		
+
 		case	SKT_CONNECTING:
 		{
 			GetOption(SO_ERROR,nerr);
 			OnEvent(FD_CONNECT,nerr);
 		}
 		break;
-		
+
 		default:
 		break ;
 	}
@@ -284,23 +301,23 @@ void CAsyncSocket::OnPollIn()
 		case	SKT_LISTEN:
 			OnEvent(FD_ACCEPT,0);
 		break ;
-		
+
 		case	SKT_BOUND:
 			if (m_type == SOCK_DGRAM)
 				OnEvent(FD_READ,0);
 		break ;
-		
+
 		case	SKT_CONNECTING:
 			OnEvent(FD_CONNECT,0);
 		break ;
-		
+
 		case	SKT_CONNECTED:
 			m_state = SKT_CONNECTED;
 			OnEvent(FD_READ,0);
 		break ;
-		
+
 		default:
-			printf("POLLIN in state %s\n",StateName(m_state));
+			//printf("EPOLLIN in state %s\n",StateName(m_state));
 		break ;
 	}
 }
@@ -313,18 +330,18 @@ void CAsyncSocket::OnPollOut()
 			if (m_type == SOCK_DGRAM)
 				OnEvent(FD_WRITE,0);
 		break ;
-		
+
 		case	SKT_CONNECTING:
 			m_state = SKT_CONNECTED;
 			OnEvent(FD_CONNECT,0);
 		break ;
-		
+
 		case	SKT_CONNECTED:
 			OnEvent(FD_WRITE,0);
 		break;
-		
+
 		default:
-			printf("POLLOUT in state %s\n",StateName(m_state));
+			//printf("EPOLLOUT in state %s\n",StateName(m_state));
 		break ;
 	}
 }

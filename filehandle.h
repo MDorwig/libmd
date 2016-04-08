@@ -28,17 +28,18 @@ public:
 	int 					EPollDel();
 	int 					EPollAdd(int events);
 	int 					EPollMod(int events);
+	void          TakeOver(CFileHandle * other);
 	CFileHandle * GetNext() { return m_next;}
 	static void * WorkerThread(void * arg);
 protected:
 	CFileHandle	*	m_next;
 	CFileHandle	*	m_prev;
 	epoll_event 	m_epoll;
-private:	
+private:
 	int						m_fd ;
 	friend class CFileHandleList;
 	static int		m_epollfd;
 	static struct epoll_event m_pollmap[256];
-	
+
 };
 #endif /*FILEHANDLE_H_*/
