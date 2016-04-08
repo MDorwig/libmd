@@ -140,18 +140,19 @@ class utf8string : public string
 {
 public:
 
-  basic_string & operator = (const char * s)
+  utf8string & operator = (const char * s)
   {
-    return string::operator = (s);
+    string::operator = (s);
+    return *this;
   }
 
-  basic_string & operator = (int ch)
+  utf8string & operator = (int ch)
   {
     string::clear();
     return operator += (ch);
   }
 
-  basic_string & operator += (int ch)
+  utf8string & operator += (int ch)
   {
     if (ch < 0x80)
       string::operator +=((char)ch);
