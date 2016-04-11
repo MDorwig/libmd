@@ -9,6 +9,7 @@
 #define XMLPARSER_H_
 
 #include <string>
+#include <assert.h>
 #include <list>
 
 using namespace std;
@@ -140,18 +141,19 @@ class utf8string : public string
 {
 public:
 
-  basic_string & operator = (const char * s)
+  utf8string & operator = (const char * s)
   {
-    return string::operator = (s);
+    string::operator = (s);
+    return *this;
   }
 
-  basic_string & operator = (int ch)
+  utf8string & operator = (int ch)
   {
     string::clear();
     return operator += (ch);
   }
 
-  basic_string & operator += (int ch)
+  utf8string & operator += (int ch)
   {
     if (ch < 0x80)
       string::operator +=((char)ch);
@@ -166,12 +168,16 @@ public:
       string::operator +=(0x80 | ((ch >>  6) & 0x3f));
       string::operator +=(0x80 | ((ch >>  0) & 0x3f));
     }
-    else
+    else if (ch <= 0x1fffff)
     {
       string::operator +=(0xf0 | ((ch >> 18) & 0x07));
       string::operator +=(0x80 | ((ch >> 12) & 0x3f));
       string::operator +=(0x80 | ((ch >>  6) & 0x3f));
       string::operator +=(0x80 | ((ch >>  0) & 0x3f));
+    }
+    else
+    {
+      assert(false);
     }
     return *this;
   }
