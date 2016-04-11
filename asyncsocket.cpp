@@ -66,7 +66,6 @@ int CAsyncSocket::Create(int port,int type,int events)
 	if (res!= -1)
 	{
 		Attach(res,0) ;
-		SetBlocking(0);
 		if (port != 0)
 		{
 			sain.sin_addr.s_addr = htonl(INADDR_ANY) ;
@@ -75,10 +74,10 @@ int CAsyncSocket::Create(int port,int type,int events)
 			m_state = SKT_BOUND;
 			SetOption(SO_REUSEADDR,1);
 			res = Bind((struct sockaddr*)&sain,sizeof sain);
-			if (res != -1)
+			if (res == 0)
 			{
-				if (m_type == SOCK_DGRAM)
-					AsyncSelect(events);
+			  if (m_type == SOCK_DGRAM)
+			    AsyncSelect(m_eventmask);
 			}
 			else
 			{
