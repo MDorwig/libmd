@@ -48,8 +48,8 @@ void CMsgQueue::PostMessage(CMsg * msg)
 {
   m_lock.Lock();
   m_list.AddTail(*msg);
-  m_lock.Release();
   m_notempty.Set();
+  m_lock.Release();
 }
 
 void CMsgQueue::PostMessage(const CMsg & item)
