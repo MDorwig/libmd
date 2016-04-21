@@ -81,8 +81,8 @@ void CMsgQueue::GetMessage(CMsg & msg)
       {
           m_lock.Release();
           m_notempty.Wait();
-          m = (CMsg*)m_list.GetHead();
           m_lock.Lock();
+          m = (CMsg*)m_list.GetHead();
       }
       m_list.Remove(*m);
       m_lock.Release();

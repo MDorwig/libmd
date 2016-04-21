@@ -7,6 +7,7 @@
 
 #include <string.h>
 #include <time.h>
+#include <assert.h>
 #include "msgqueue.h"
 #include "thread.h"
 
@@ -25,12 +26,16 @@ CMutex::~CMutex()
 
 int CMutex::Lock()
 {
-	return pthread_mutex_lock(&m_lock);
-}
+  int res = pthread_mutex_lock(&m_lock);
+	assert(res == 0);
+	return res ;
+ }
 
 int CMutex::Release()
 {
-	return pthread_mutex_unlock(&m_lock);
+  int res = pthread_mutex_unlock(&m_lock);
+  assert(res == 0);
+  return res ;
 }
 
 CCondition::CCondition()
