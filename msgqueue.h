@@ -46,6 +46,7 @@ public:
   void PostMessage(unsigned id, long unsigned p1 = 0, long unsigned p2 = 0, long unsigned p3 = 0);
   void PostMessage(MsgQueueDelegate d,void * pthis, long unsigned p2 = 0, long unsigned p3 = 0);
   void GetMessage(CMsg & item);
+  bool PeekMessage(CMsg & item);
   static unsigned CreateMessageId();
 private:
   void PostMessage(CMsg * item);

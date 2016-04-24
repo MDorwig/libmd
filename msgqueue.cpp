@@ -96,3 +96,30 @@ void CMsgQueue::GetMessage(CMsg & msg)
       delete m ;
   }
 }
+
+bool CMsgQueue::PeekMessage(CMsg & msg)
+{
+  bool res = false;
+  m_lock.Lock();
+  CMsg * m = (CMsg*)m_list.GetHead();
+  if (m != NULL)
+  {
+    m_list.Remove(*m);
+    m_lock.Release();
+    if (!m->isDelegate())
+    {
+      msg = *m ;
+      res = true;
+    }
+    else
+    {
+      m->Invoke();
+    }
+    delete m ;
+  }
+  else
+  {
+    m_lock.Release();
+  }
+  return res ;
+}
