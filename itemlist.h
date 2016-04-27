@@ -77,7 +77,7 @@ public:
 
   bool isEmpty()
   {
-    return m_list.m_next != &m_list ;
+    return m_list.m_next == &m_list ;
   }
 
   CListItem * GetNext(CListItem * item)
