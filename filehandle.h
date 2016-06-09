@@ -31,6 +31,7 @@ public:
 	void          TakeOver(CFileHandle * other);
 	CFileHandle * GetNext() { return m_next;}
 	static void * WorkerThread(void * arg);
+	static void   InitEpoll();
 protected:
 	CFileHandle	*	m_next;
 	CFileHandle	*	m_prev;

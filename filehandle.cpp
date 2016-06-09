@@ -5,6 +5,7 @@
 #include <string.h>
 #include <poll.h>
 #include <signal.h>
+#include <assert.h>
 #include "filehandle.h"
 #include "mdmt.h"
 
@@ -42,15 +43,6 @@ void * CFileHandle::WorkerThread(void * p)
 {
 	int res ;
 	CFileHandle * pfh ;
-	if (m_epollfd == 0)
-	{
-		m_epollfd = epoll_create(sizeof m_pollmap/sizeof m_pollmap[0]);
-		if (m_epollfd == -1)
-		{
-			perror("epoll_create");
-			return NULL;
-		}
-	}
 	while(1)
 	{
 		res = epoll_wait(m_epollfd,m_pollmap,sizeof m_pollmap/sizeof m_pollmap[0],-1);
@@ -65,26 +57,37 @@ void * CFileHandle::WorkerThread(void * p)
 					if (pfh != NULL)
 					{
 						if (pfd->events & EPOLLHUP)
+						{
 							pfh->OnPollHup();
+						}
 						else if (pfd->events & EPOLLERR)
+						{
 							pfh->OnPollErr();
+					  }
 						else
 						{
 							if (pfd->events & EPOLLIN)
+							{
 								pfh->OnPollIn();
+							}
 							if (pfd->events & EPOLLOUT)
+							{
 								pfh->OnPollOut();
+              }
 						}
 					}
 				}
 			}
 		}
 	}
+	return NULL;
 }
 
 void InitFileHandleWorker()
 {
 	pthread_attr_t attr ;
+
+	CFileHandle::InitEpoll();
 	pthread_attr_init(&attr);
 	pthread_attr_setstacksize(&attr,0x8000);
 	pthread_create(&fhworker,&attr,CFileHandle::WorkerThread,NULL);
@@ -121,8 +124,9 @@ void CFileHandleList::AddTail(CFileHandle * pfh)
 	if (fhworker == 0)
 		InitFileHandleWorker();
 	if (m_first == NULL)
-
+	{
 		m_first = pfh ;
+	}
 	else
 	{
 		m_last->m_next = pfh ;
@@ -194,6 +198,16 @@ CFileHandle::~CFileHandle()
 	filehandles.Remove(this);
 }
 
+void CFileHandle::InitEpoll()
+{
+  if (m_epollfd == 0)
+  {
+    m_epollfd = epoll_create(sizeof m_pollmap/sizeof m_pollmap[0]);
+    assert (m_epollfd != -1);
+  }
+}
+
+
 void CFileHandle::Attach(int fd,int events)
 {
 	m_fd = fd ;
@@ -227,15 +241,6 @@ int CFileHandle::EPollAdd(int events)
 	{
 		m_epoll.data.ptr = this ;
 		m_epoll.events   = events|EPOLLET;
-		if (m_epollfd == 0)
-		{
-			m_epollfd = epoll_create(sizeof m_pollmap/sizeof m_pollmap[0]);
-			if (m_epollfd == -1)
-			{
-				perror("epoll_create");
-				return -1;
-			}
-		}
 		res = epoll_ctl(m_epollfd,EPOLL_CTL_ADD,m_fd,&m_epoll);
 	}
 	return res ;
