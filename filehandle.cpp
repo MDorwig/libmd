@@ -123,7 +123,7 @@ void CFileHandleList::AddTail(CFileHandle * pfh)
 {
 	Lock();
 #ifdef __linux__
-	if (fhworker == NULL)
+	if (fhworker == 0)
 #else
 		if (fhworker.p == NULL)
 #endif
@@ -225,7 +225,7 @@ void CFileHandle::Attach(int fd,int events)
 int CFileHandle::GetFlags()
 {
 #ifdef __linux__
-	return _fcntl(m_fd,F_GETFL);
+	return fcntl(m_fd,F_GETFL);
 #else
 	return 0;
 #endif

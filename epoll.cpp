@@ -5,6 +5,7 @@
  *      Author: Dorwig
  */
 
+#ifndef __linux__
 #include "epoll.h"
 #include <Winsock2.h>
 #include <conio.h>
@@ -245,6 +246,6 @@ void epoll_cleanup()
 {
     WSACleanup();
 }
-
+#endif
 
 
