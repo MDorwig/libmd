@@ -2,7 +2,11 @@
 #define FILEHANDLE_H_
 
 #include <pthread.h>
+#ifdef __linux__
 #include <sys/epoll.h>
+#else
+#include "epoll.h"
+#endif
 
 class CFileHandle
 {

@@ -1,6 +1,8 @@
 #include "asyncsocket.h"
 #include <fcntl.h>
+#ifdef __linux__
 #include <poll.h>
+#endif
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
@@ -169,7 +171,11 @@ int	CAsyncSocket::Connect(struct sockaddr * sa,socklen_t salen)
 	if (res == -1)
 	{
 		SetLastError(errno);
+#ifdef __linux__
 		if (errno == EAGAIN || errno == EINPROGRESS)
+#else
+		if (errno == EAGAIN)
+#endif
 		{
 			m_state = SKT_CONNECTING;
 			res = 0 ;
@@ -196,7 +202,7 @@ int	CAsyncSocket::Connect(const char * host,int port)
 
 int CAsyncSocket::Receive(void * buf,size_t size,int flags)
 {
-	int res = recv(GetHandle(),buf,size,flags);
+	int res = recv(GetHandle(),(char*)buf,size,flags);
 	if (res == -1)
 		SetLastError(errno);
 	else if (res == 0)
@@ -208,7 +214,7 @@ int CAsyncSocket::Receive(void * buf,size_t size,int flags)
 
 int CAsyncSocket::Send(const void * buf,size_t size,int flags)
 {
-	int res = send(GetHandle(),buf,size,flags);
+	int res = send(GetHandle(),(const char*)buf,size,flags);
 	if (res == -1)
 		SetLastError(errno);
 	else

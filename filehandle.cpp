@@ -1,11 +1,13 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <sys/ioctl.h>
 #include <string.h>
-#include <poll.h>
-#include <signal.h>
 #include <assert.h>
+#if defined __linux__
+#include <sys/ioctl.h>
+#include <poll.h>
+#endif
+#include <signal.h>
 #include "filehandle.h"
 #include "mdmt.h"
 
@@ -37,7 +39,6 @@ int CFileHandle::m_epollfd;
 pthread_t fhworker;
 
 CEvent FileHandleListEvent ;
-
 
 void * CFileHandle::WorkerThread(void * p)
 {
@@ -121,7 +122,11 @@ void CFileHandleList::Unlock()
 void CFileHandleList::AddTail(CFileHandle * pfh)
 {
 	Lock();
-	if (fhworker == 0)
+#ifdef __linux__
+	if (fhworker == NULL)
+#else
+		if (fhworker.p == NULL)
+#endif
 		InitFileHandleWorker();
 	if (m_first == NULL)
 	{
@@ -200,11 +205,13 @@ CFileHandle::~CFileHandle()
 
 void CFileHandle::InitEpoll()
 {
+#ifdef __linux__
   if (m_epollfd == 0)
   {
     m_epollfd = epoll_create(sizeof m_pollmap/sizeof m_pollmap[0]);
     assert (m_epollfd != -1);
   }
+#endif
 }
 
 
@@ -217,12 +224,20 @@ void CFileHandle::Attach(int fd,int events)
 
 int CFileHandle::GetFlags()
 {
-	return fcntl(m_fd,F_GETFL);
+#ifdef __linux__
+	return _fcntl(m_fd,F_GETFL);
+#else
+	return 0;
+#endif
 }
 
 int CFileHandle::SetFlags(int flags)
 {
+#ifdef __linux__
 	return fcntl(m_fd,F_SETFL,flags);
+#else
+	return 0;
+#endif
 }
 
 int CFileHandle::EPollDel()
@@ -298,7 +313,11 @@ int CFileHandle::Read(void * data,size_t size)
 
 int CFileHandle::Ioctl(int request,void * argp)
 {
+#ifdef __linux__
 	return ioctl(m_fd,request,argp);
+#else
+	return -1;
+#endif
 }
 
 void CFileHandle::SetPollMask(int mask)
@@ -308,6 +327,7 @@ void CFileHandle::SetPollMask(int mask)
 
 int CFileHandle::SetBlocking(int on)
 {
+#ifdef __linux__
 	int val = GetFlags();
 	if (val != -1)
 	{
@@ -318,4 +338,7 @@ int CFileHandle::SetBlocking(int on)
 		val = SetFlags(val);
 	}
 	return val ;
+#else
+	return -1 ;
+#endif
 }

@@ -2,9 +2,14 @@
 #define ASYNCSOCKET_H_
 
 #include "filehandle.h"
+#ifdef __linux__
 #include <sys/socket.h>
 #include <netinet/ip.h>
 #include <arpa/inet.h>
+#else
+#define socklen_t int
+#endif
+
 enum sktstates
 {
 	SKT_IDLE,
@@ -15,12 +20,14 @@ enum sktstates
 	SKT_CLOSED
 };
 
+#ifdef __linux__
 #define	FD_READ 		1
 #define	FD_WRITE 		2
 #define FD_OOB 			4
 #define	FD_ACCEPT 	8
 #define FD_CONNECT 	16
 #define FD_CLOSE		32
+#endif
 
 class CAsyncSocket : public CFileHandle
 {
