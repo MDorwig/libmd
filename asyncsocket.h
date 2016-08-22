@@ -76,14 +76,6 @@ public:
 class CAsyncSocket : public CFileHandle
 {
 public:
-#ifdef TEST
-  typedef AioAccept<CAsyncSocket,CAsyncSocket> AcceptReq;
-  typedef void (CAsyncSocket::*AcceptCallback)(AcceptReq & aio);
-  typedef AioConnect<CAsyncSocket> ConnectReq;
-  typedef void (CAsyncSocket::*ConnectCallback)(ConnectReq & aio);
-  typedef AioReadWrite<CAsyncSocket> ReadWriteReq;
-  typedef void (CAsyncSocket::*ReadWriteCallback)(ReadWriteReq & aio);
-#endif
 								CAsyncSocket(CMsgQueue & q);
 	virtual 			~CAsyncSocket();
 	int						Create(int port,int type);
@@ -92,18 +84,6 @@ public:
 	int						Listen(int backlog);
 	int						Bind(const struct sockaddr * sa,socklen_t salen);
 	int						Bind(int port);
-#ifdef TEST
-	void					BeginAccept(CAsyncSocket * accskt);
-  void          BeginConnect(struct sockaddr * sa,socklen_t salen);
-  void          BeginConnect(const char * host,int port);
-  void          BeginRead(char * data,size_t len);
-  void          BeginWrite(char * data,size_t len);
-
-	virtual void  AcceptComplete(AcceptReq & aio);
-  virtual void  ConnectComplete(ConnectReq & aio);
-  virtual void  ReadComplete(ReadWriteReq & aio);
-  virtual void  WriteComplete(ReadWriteReq & aio);
-#endif
 
 	int						GetLastError() { return m_lasterror;}
 	int						SetOption(int name,int value);
@@ -113,8 +93,8 @@ public:
 private:
 	void					SetLastError(int nerr) { m_lasterror = nerr;}
 protected:
-	int 			m_type ;
-	int				m_port ;
-	int 			m_lasterror;
+	int 			    m_type ;
+	int				    m_port ;
+	int 			    m_lasterror;
 };
 #endif /*ASYNCSOCKET_H_*/

@@ -23,7 +23,7 @@ public:
 	CFileHandle * FindFd(int fd);
 	int						GetCount() { return m_count;}
 private:
-	pthread_mutex_t m_lock;
+	CMutex        m_lock;
 };
 
 static CFileHandleList filehandles ;
@@ -110,27 +110,22 @@ void InitFileHandleWorker()
 
 CFileHandleList::CFileHandleList()
 {
-	pthread_mutexattr_t attr;
-	pthread_mutexattr_init(&attr);
-	pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-	pthread_mutex_init(&m_lock,&attr);
 	m_first= NULL;
 	m_last = NULL;
 }
 
 CFileHandleList::~CFileHandleList()
 {
-	pthread_mutex_destroy(&m_lock);
 }
 
 void CFileHandleList::Lock()
 {
-	pthread_mutex_lock(&m_lock);
+	m_lock.Lock();
 }
 
 void CFileHandleList::Unlock()
 {
-	pthread_mutex_unlock(&m_lock);
+	m_lock.Release();
 }
 
 void CFileHandleList::AddTail(CFileHandle * pfh)

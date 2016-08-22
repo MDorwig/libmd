@@ -4,7 +4,7 @@
  *  Created on: 11.04.2013
  *      Author: dorwig
  */
-
+#include <stdio.h>
 #include <string.h>
 #include <time.h>
 #include <assert.h>
@@ -13,10 +13,14 @@
 
 CMutex::CMutex()
 {
+#if 1
 	pthread_mutexattr_t attr;
 	pthread_mutexattr_init(&attr);
 	pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
 	pthread_mutex_init(&m_lock,&attr);
+#else
+	m_lock = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+#endif
 }
 
 CMutex::~CMutex()
@@ -27,7 +31,12 @@ CMutex::~CMutex()
 int CMutex::Lock()
 {
   int res = pthread_mutex_lock(&m_lock);
-	assert(res == 0);
+  if (res != 0)
+  {
+    printf("mutex_lock returns %d - %s\n",res,strerror(res));
+    fflush(stdout);
+    assert(res == 0);
+  }
 	return res ;
  }
 
