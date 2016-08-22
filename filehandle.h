@@ -2,45 +2,75 @@
 #define FILEHANDLE_H_
 
 #include <pthread.h>
-#include <sys/epoll.h>
+#include <unistd.h>
+#include <sys/poll.h>
+#include "msgqueue.h"
+
+class AioBase : public CMsg
+{
+public:
+  AioBase(void) { m_fd = -1;}
+  virtual ~AioBase() { }
+  int    m_fd ;
+};
+
+template<class T> class AioReadWrite : public AioBase
+{
+public:
+  typedef void (T::*AioReadWriteCallback)(AioReadWrite<T> &);
+  AioReadWriteCallback m_callback;
+  T    * m_obj;
+  char * m_buffer;
+  size_t m_buflen;
+
+  AioReadWrite(int fd, T * obj, AioReadWriteCallback callback, char * buf, size_t len)
+  {
+    m_fd = fd;
+    m_obj= obj;
+    m_callback = callback;
+    m_buffer = buf;
+    m_buflen = len;
+  }
+
+  void Invoke()
+  {
+    (m_obj->*m_callback)(*this);
+  }
+
+  int  EndRead() const
+  {
+    int status = read(m_fd,m_buffer,m_buflen);
+    return status;
+  }
+
+  int EndWrite() const
+  {
+    int status ;
+    status = write(m_fd,m_buffer,m_buflen);
+    return status ;
+  }
+};
 
 class CFileHandle
 {
 public:
-								CFileHandle();
+								CFileHandle(CMsgQueue & q);
 	virtual				~CFileHandle();
-	void					Attach(int fd,int events);
+	void					Attach(int fd);
 	int						GetHandle() { return m_fd;}
 	int						Open(const char * name,int flags);
 	int						Close();
-	int						Read(void * buffer,size_t size);
-	int						Write(const void * data,size_t size);
 	int						Ioctl(int request,void * argp);
 	int						GetFlags();
 	int						SetFlags(int value);
 	int						SetBlocking(int on);
-	virtual void 	OnPollErr()= 0;
-	virtual void 	OnPollHup()= 0;
-	virtual void 	OnPollIn() = 0;
-	virtual void 	OnPollOut()= 0;
-	void					SetPollMask(int mask);
-	int           GetPollMask() { return m_epoll.events & ~(EPOLLET);}
-	int 					EPollDel();
-	int 					EPollAdd(int events);
-	int 					EPollMod(int events);
 	void          TakeOver(CFileHandle * other);
-	CFileHandle * GetNext() { return m_next;}
 	static void * WorkerThread(void * arg);
-	static void   InitEpoll();
-protected:
-	CFileHandle	*	m_next;
-	CFileHandle	*	m_prev;
-	epoll_event 	m_epoll;
-private:
+  CListItem     m_list;
+  CMsgQueue   & m_msgqueue;
 	int						m_fd ;
 	friend class CFileHandleList;
-	static int		m_epollfd;
-	static struct epoll_event m_pollmap[256];
-
+	AioBase *     m_inreq;
+	AioBase *     m_outreq;
 };
 #endif /*FILEHANDLE_H_*/

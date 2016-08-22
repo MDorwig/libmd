@@ -17,18 +17,7 @@ CMsg::CMsg(unsigned id,long unsigned p1,long unsigned p2,long unsigned p3)
   m_p1 = p1 ;
   m_p2 = p2 ;
   m_p3 = p3 ;
-  m_d  = NULL;
 }
-
-CMsg::CMsg(MsgQueueDelegate d,void * p1,long unsigned p2,long unsigned p3)
-{
-  m_id = 0;
-  m_p1 = (long unsigned)p1 ;
-  m_p2 = p2 ;
-  m_p3 = p3 ;
-  m_d  = d ;
-}
-
 
 CMsgQueue::CMsgQueue()
 {
@@ -47,79 +36,40 @@ unsigned CMsgQueue::CreateMessageId()
 void CMsgQueue::PostMessage(CMsg * msg)
 {
   m_lock.Lock();
-  m_list.AddTail(*msg);
+  m_list.AddTail(&msg->m_list);
   m_notempty.Set();
   m_lock.Release();
 }
 
-void CMsgQueue::PostMessage(const CMsg & item)
+CMsg * CMsgQueue::PeekMessage()
 {
-  CMsg * msg = new CMsg(item);
-  PostMessage(msg);
+  CMsg * m = NULL;
+  CListItem * i = m_list.GetHead();
+  if (i != NULL)
+    m = fromitem(i,CMsg,m_list);
+  return m ;
 }
 
-void CMsgQueue::PostMessage(unsigned id,long unsigned p1,long unsigned p2,long unsigned p3)
-{
-  CMsg * msg = new CMsg(id,p1,p2,p3);
-  PostMessage(msg);
-}
-
-void CMsgQueue::PostMessage(MsgQueueDelegate d,void * pthis,long unsigned p2,long unsigned p3)
-{
-  CMsg * msg = new CMsg(d,pthis,p2,p3);
-  PostMessage(msg);
-}
-
-void CMsgQueue::GetMessage(CMsg & msg)
+CMsg * CMsgQueue::GetMessage()
 {
   CMsg * m ;
   while(1)
   {
+      CListItem * item ;
       m_lock.Lock();
-      m = (CMsg*)m_list.GetHead();
-      while (m == NULL)
+      item = m_list.GetHead();
+      while (item == NULL)
       {
           m_lock.Release();
           m_notempty.Wait();
           m_lock.Lock();
-          m = (CMsg*)m_list.GetHead();
+          item = m_list.GetHead();
       }
-      m_list.Remove(*m);
+      m_list.Remove(item);
       m_lock.Release();
-      if (!m->isDelegate())
-      {
-          msg = *m ;
-          delete m ;
-          break ;
-      }
+      m = fromitem(item,CMsg,m_list);
       m->Invoke();
       delete m ;
   }
 }
 
-bool CMsgQueue::PeekMessage(CMsg & msg)
-{
-  bool res = false;
-  m_lock.Lock();
-  CMsg * m = (CMsg*)m_list.GetHead();
-  if (m != NULL)
-  {
-    m_list.Remove(*m);
-    m_lock.Release();
-    if (!m->isDelegate())
-    {
-      msg = *m ;
-      res = true;
-    }
-    else
-    {
-      m->Invoke();
-    }
-    delete m ;
-  }
-  else
-  {
-    m_lock.Release();
-  }
-  return res ;
-}

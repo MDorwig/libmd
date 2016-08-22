@@ -3,35 +3,13 @@
 #include <poll.h>
 #include <errno.h>
 #include <stdio.h>
+#include <assert.h>
 #include <string.h>
 
-CAsyncSocket::CAsyncSocket()
+CAsyncSocket::CAsyncSocket(CMsgQueue & q) : CFileHandle(q)
 {
-	m_eventmask=0;
 	m_type		=	0;
 	m_port 		= 0;
-	m_state		= SKT_IDLE;
-}
-
-void CAsyncSocket::OnConnect(int nerr)
-{
-}
-
-void CAsyncSocket::OnAccept(int nerr)
-{
-}
-
-void CAsyncSocket::OnClose(int nerr)
-{
-	Close();
-}
-
-void CAsyncSocket::OnReceive(int nerr)
-{
-}
-
-void CAsyncSocket::OnSend(int nErrorCode)
-{
 }
 
 int CAsyncSocket::SetOption(int name,int value)
@@ -54,51 +32,28 @@ int CAsyncSocket::GetName(struct sockaddr * sa,socklen_t * salen)
 	return getsockname(GetHandle(),sa,salen);
 }
 
-int CAsyncSocket::Create(int port,int type,int events)
+int CAsyncSocket::Create(int port,int type)
 {
 	int res ;
 	struct sockaddr_in sain ;
-	m_eventmask=events;
 	m_type		=	type;
 	m_port    = port;
-	m_state		= SKT_IDLE;
 	res       = socket(AF_INET,type,0);
 	if (res!= -1)
 	{
-		Attach(res,0) ;
+		Attach(res) ;
 		if (port != 0)
 		{
 			sain.sin_addr.s_addr = htonl(INADDR_ANY) ;
 			sain.sin_family = AF_INET;
 			sain.sin_port   = htons(port);
-			m_state = SKT_BOUND;
 			SetOption(SO_REUSEADDR,1);
 			res = Bind((struct sockaddr*)&sain,sizeof sain);
-			if (res == 0)
-			{
-			  if (m_type == SOCK_DGRAM)
-			    AsyncSelect(m_eventmask);
-			}
-			else
-			{
+			if (res == -1)
 				SetLastError(errno);
-				m_state = SKT_IDLE;
-			}
 		}
 	}
 	return res ;
-}
-
-void CAsyncSocket::AsyncSelect(int events)
-{
-	int pm = 0 ;
-	m_eventmask = events;
-	if (events & (FD_READ|FD_ACCEPT))
-		pm |= EPOLLIN;
-	if (events & (FD_WRITE|FD_CONNECT))
-		pm |= EPOLLOUT;
-	SetPollMask(pm);
-	//ClrPollMask(~pm);
 }
 
 CAsyncSocket::~CAsyncSocket()
@@ -110,12 +65,7 @@ int CAsyncSocket::Listen(int backlog)
 {
 	int res ;
 	res = listen(GetHandle(),backlog);
-	if (res != -1)
-	{
-		m_state = SKT_LISTEN;
-		AsyncSelect(m_eventmask);
-	}
-	else
+	if (res == -1)
 		SetLastError(errno);
 	return res ;
 }
@@ -124,9 +74,7 @@ int	CAsyncSocket::Bind(const struct sockaddr * sa,socklen_t salen)
 {
 	int res ;
 	res = bind(GetHandle(),sa,salen);
-	if (res != -1)
-		m_state = SKT_BOUND;
-	else
+	if (res == -1)
 		SetLastError(errno);
 	return res ;
 }
@@ -142,79 +90,87 @@ int	CAsyncSocket::Bind(int port)
 	return Bind((struct sockaddr*)&sain,salen);
 }
 
-int	CAsyncSocket::Accept(CAsyncSocket & accskt,struct sockaddr * sa,socklen_t * salen)
+#ifdef TEST
+void CAsyncSocket::BeginAccept(CAsyncSocket * skt)
 {
-	int res ;
-	res = accept(GetHandle(),sa,salen);
-	if (res != -1)
-	{
-		accskt.m_type  		= m_type;
-		accskt.m_port     = m_port;
-		accskt.m_state 		= SKT_CONNECTED;
-		accskt.Attach(res,0) ;
-		accskt.AsyncSelect(m_eventmask);
-	}
-	else
-	{
-		SetLastError(errno);
-	}
-	SetPollMask(EPOLLIN);
-	return res ;
+  assert(m_inreq == NULL);
+  m_inreq = new AcceptReq(m_fd,this,&CAsyncSocket::AcceptComplete,skt);
 }
 
-int	CAsyncSocket::Connect(struct sockaddr * sa,socklen_t salen)
+void CAsyncSocket::AcceptComplete(AcceptReq & aio)
 {
-	int res ;
-	res = connect(GetHandle(),sa,salen);
+
+}
+
+void	CAsyncSocket::BeginConnect(struct sockaddr * sa,socklen_t salen)
+{
+  ConnectReq * cr = new ConnectReq(m_fd,this,&CAsyncSocket::ConnectComplete);
+	int res = connect(GetHandle(),sa,salen);
 	if (res == -1)
 	{
 		SetLastError(errno);
-		if (errno == EAGAIN || errno == EINPROGRESS)
+		if (errno == EINPROGRESS)
+		  m_outreq = cr ;
+		else
 		{
-			m_state = SKT_CONNECTING;
-			res = 0 ;
-			AsyncSelect(m_eventmask);
+		  ConnectComplete(*cr);
+		  delete cr;
 		}
 	}
 	else
 	{
-		m_state	= SKT_CONNECTED;
-		AsyncSelect(m_eventmask);
-		OnEvent(FD_CONNECT,0);
+    ConnectComplete(*cr);
+    delete cr;
 	}
-	return res ;
 }
 
-int	CAsyncSocket::Connect(const char * host,int port)
+void	CAsyncSocket::BeginConnect(const char * host,int port)
 {
 	struct sockaddr_in sain ;
 	sain.sin_addr.s_addr = inet_addr(host);
 	sain.sin_port = htons(port);
 	sain.sin_family = AF_INET;
-	return Connect((struct sockaddr*)&sain,sizeof sain);
+	BeginConnect((struct sockaddr*)&sain,sizeof sain);
 }
 
-int CAsyncSocket::Receive(void * buf,size_t size,int flags)
+void CAsyncSocket::ConnectComplete(ConnectReq & aio)
 {
-	int res = recv(GetHandle(),buf,size,flags);
-	if (res == -1)
-		SetLastError(errno);
-	else if (res == 0)
-		OnEvent(FD_CLOSE,0);
-	else
-	  SetPollMask(GetPollMask()|EPOLLIN);
-	return res ;
+  int status = aio.EndConnect();
+  if (status == 0)
+  {
+
+  }
 }
 
-int CAsyncSocket::Send(const void * buf,size_t size,int flags)
+void CAsyncSocket::BeginRead(char * buf,size_t size)
 {
-	int res = send(GetHandle(),buf,size,flags);
-	if (res == -1)
-		SetLastError(errno);
-	else
-		SetPollMask(GetPollMask()|EPOLLOUT);
-	return res ;
+  assert(m_inreq == NULL);
+  m_inreq = new ReadWriteReq(m_fd,this,&CAsyncSocket::ReadComplete,buf,size);
 }
+
+void CAsyncSocket::ReadComplete(ReadWriteReq & aio)
+{
+  int status = aio.EndRead();
+  if (status == 0)
+  {
+
+  }
+}
+
+void CAsyncSocket::BeginWrite(char * buf,size_t size)
+{
+  assert(m_outreq == NULL);
+  m_outreq = new ReadWriteReq(m_fd,this,&CAsyncSocket::WriteComplete,buf,size);
+}
+
+void CAsyncSocket::WriteComplete(ReadWriteReq & aio)
+{
+  int n = aio.EndWrite();
+  if (n > 0)
+  {
+  }
+}
+#endif
 
 int CAsyncSocket::ShutDown(int how)
 {
@@ -228,119 +184,4 @@ int CAsyncSocket::ShutDown(int how)
 int CAsyncSocket::Close()
 {
 	return CFileHandle::Close();
-}
-
-void CAsyncSocket::Dispatch(int events,int nerr)
-{
-	if (events & FD_CONNECT)
-		OnConnect(nerr);
-	if (events & FD_ACCEPT)
-		OnAccept(nerr);
-	if (events & FD_READ)
-		OnReceive(nerr);
-	if (events & FD_WRITE)
-		OnSend(nerr);
-	if (events & FD_CLOSE)
-		OnClose(nerr);
-}
-
-#define CASETXT(x)	case x : return #x
-
-const char * CAsyncSocket::StateName(sktstates st)
-{
-	switch(st)
-	{
-		CASETXT(SKT_IDLE);
-		CASETXT(SKT_LISTEN);
-		CASETXT(SKT_BOUND);
-		CASETXT(SKT_CONNECTING);
-		CASETXT(SKT_CONNECTED);
-		CASETXT(SKT_CLOSED);
-	}
-	return "SKT_UNKONW";
-}
-
-void CAsyncSocket::OnPollErr()
-{
-	//printf("EPOLLERR in state %s\n",StateName(m_state));
-	OnEvent(FD_CLOSE,0);
-}
-
-void CAsyncSocket::OnPollHup()
-{
-	int nerr = 0;
-	//printf("EPOLLHUP in state %s\n",StateName(m_state));
-	switch(m_state)
-	{
-		case SKT_CONNECTED:
-			OnEvent(FD_CLOSE,0);
-		break ;
-
-		case	SKT_CONNECTING:
-		{
-			GetOption(SO_ERROR,nerr);
-			OnEvent(FD_CONNECT,nerr);
-		}
-		break;
-
-		default:
-		break ;
-	}
-}
-
-void CAsyncSocket::OnEvent(int events,int nerr)
-{
-	Dispatch(events,nerr);
-}
-
-void CAsyncSocket::OnPollIn()
-{
-	switch(m_state)
-	{
-		case	SKT_LISTEN:
-			OnEvent(FD_ACCEPT,0);
-		break ;
-
-		case	SKT_BOUND:
-			if (m_type == SOCK_DGRAM)
-				OnEvent(FD_READ,0);
-		break ;
-
-		case	SKT_CONNECTING:
-			OnEvent(FD_CONNECT,0);
-		break ;
-
-		case	SKT_CONNECTED:
-			m_state = SKT_CONNECTED;
-			OnEvent(FD_READ,0);
-		break ;
-
-		default:
-			//printf("EPOLLIN in state %s\n",StateName(m_state));
-		break ;
-	}
-}
-
-void CAsyncSocket::OnPollOut()
-{
-	switch(m_state)
-	{
-		case	SKT_BOUND:
-			if (m_type == SOCK_DGRAM)
-				OnEvent(FD_WRITE,0);
-		break ;
-
-		case	SKT_CONNECTING:
-			m_state = SKT_CONNECTED;
-			OnEvent(FD_CONNECT,0);
-		break ;
-
-		case	SKT_CONNECTED:
-			OnEvent(FD_WRITE,0);
-		break;
-
-		default:
-			//printf("EPOLLOUT in state %s\n",StateName(m_state));
-		break ;
-	}
 }
