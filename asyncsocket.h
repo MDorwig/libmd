@@ -2,7 +2,7 @@
 #define ASYNCSOCKET_H_
 
 #include "filehandle.h"
-#ifdef __linux__
+#if defined __linux__ || defined __CYGWIN__
 #include <sys/socket.h>
 #include <netinet/ip.h>
 #include <arpa/inet.h>
@@ -20,7 +20,7 @@ enum sktstates
 	SKT_CLOSED
 };
 
-#ifdef __linux__
+#if defined __linux__ || defined __CYGWIN__
 #define	FD_READ 		1
 #define	FD_WRITE 		2
 #define FD_OOB 			4

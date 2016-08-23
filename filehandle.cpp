@@ -1,9 +1,10 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
 #include <assert.h>
-#if defined __linux__
+#if defined __linux__ || defined __CYGWIN__
 #include <sys/ioctl.h>
 #include <poll.h>
 #endif
@@ -33,8 +34,12 @@ private:
 };
 
 static CFileHandleList filehandles ;
+#ifdef _SYS_EPOLL_H
 struct epoll_event CFileHandle::m_pollmap[256];
 int CFileHandle::m_epollfd;
+#else
+struct pollfd CFileHandle::m_pollmap[256];
+#endif
 
 pthread_t fhworker;
 
@@ -46,6 +51,7 @@ void * CFileHandle::WorkerThread(void * p)
 	CFileHandle * pfh ;
 	while(1)
 	{
+#ifdef _SYS_EPOLL_H
 		res = epoll_wait(m_epollfd,m_pollmap,sizeof m_pollmap/sizeof m_pollmap[0],-1);
 		if (res > 0)
 		{
@@ -80,6 +86,48 @@ void * CFileHandle::WorkerThread(void * p)
 				}
 			}
 		}
+#else
+		size_t npoll = 0 ;
+		for (pfh = filehandles.GetFirst() ; pfh != NULL && npoll < sizeof(m_pollmap)/sizeof m_pollmap[0]; pfh = pfh->GetNext())
+		{
+			if (pfh->m_fd != -1 && pfh->m_events != 0)
+			{
+				pollfd & pfd = m_pollmap[npoll];
+				pfd.fd = pfh->m_fd;
+				pfd.events = pfh->m_events;
+				pfd.revents= 0;
+				npoll++;
+			}
+		}
+		res = poll(m_pollmap,npoll,100);
+		if (res > 0)
+		{
+			for (size_t i = 0 ; i < npoll ; i++)
+			{
+				pollfd & pfd = m_pollmap[i] ;
+				if (pfd.revents == 0) continue;
+				pfh = filehandles.FindFd(pfd.fd);
+				if (pfh != NULL)
+				{
+					if (pfd.revents & POLLERR)
+						pfh->OnPollErr();
+					if (pfd.revents & POLLHUP)
+						pfh->OnPollHup();
+					if (pfd.revents & POLLIN)
+					{
+						pfh->m_events &= ~POLLIN;
+						pfh->OnPollIn();
+					}
+					if (pfd.revents & POLLOUT)
+					{
+						pfh->m_events &= ~POLLOUT;
+						pfh->OnPollOut();
+					}
+				}
+			}
+
+		}
+#endif
 	}
 	return NULL;
 }
@@ -122,11 +170,7 @@ void CFileHandleList::Unlock()
 void CFileHandleList::AddTail(CFileHandle * pfh)
 {
 	Lock();
-#ifdef __linux__
 	if (fhworker == 0)
-#else
-		if (fhworker.p == NULL)
-#endif
 		InitFileHandleWorker();
 	if (m_first == NULL)
 	{
@@ -192,8 +236,12 @@ CFileHandle::CFileHandle()
 	m_next = NULL;
 	m_prev = NULL;
 	m_fd = -1 ;
+#ifdef _SYS_EPOLL_H
 	m_epoll.events   = 0;
 	m_epoll.data.ptr = NULL;
+#else
+	m_events = 0 ;
+#endif
 	filehandles.AddTail(this);
 }
 
@@ -224,57 +272,69 @@ void CFileHandle::Attach(int fd,int events)
 
 int CFileHandle::GetFlags()
 {
-#ifdef __linux__
 	return fcntl(m_fd,F_GETFL);
-#else
-	return 0;
-#endif
 }
 
 int CFileHandle::SetFlags(int flags)
 {
-#ifdef __linux__
 	return fcntl(m_fd,F_SETFL,flags);
-#else
-	return 0;
-#endif
 }
 
 int CFileHandle::EPollDel()
 {
-	int res ;
+	int res = 0;
+#ifdef _SYS_EPOLL_H
 	m_epoll.data.ptr = NULL;
 	m_epoll.events   = 0;
 	res = epoll_ctl(m_epollfd,EPOLL_CTL_DEL,m_fd,&m_epoll);
+#else
+	m_events = 0 ;
+#endif
 	return res ;
 }
 
 int CFileHandle::EPollAdd(int events)
 {
 	int res = 0 ;
+#ifdef _SYS_EPOLL_H
 	if (m_epoll.data.ptr == NULL)
 	{
 		m_epoll.data.ptr = this ;
 		m_epoll.events   = events|EPOLLET;
 		res = epoll_ctl(m_epollfd,EPOLL_CTL_ADD,m_fd,&m_epoll);
 	}
+#else
+	m_events = events;
+#endif
 	return res ;
 }
 
 int CFileHandle::EPollMod(int events)
 {
+#ifdef _SYS_EPOLL_H
 	m_epoll.events = events|EPOLLET;
 	return epoll_ctl(m_epollfd,EPOLL_CTL_MOD,m_fd,&m_epoll);
+#else
+	m_events |= events;
+	return 0;
+#endif
 }
 
 void CFileHandle::TakeOver(CFileHandle * other)
 {
+#ifdef _SYS_EPOLL_H
 	m_fd = other->m_fd;
 	m_epoll.data.ptr = this;
 	EPollMod(other->m_epoll.events);
 	other->m_epoll.data.ptr = NULL;
 	other->m_epoll.events = 0 ;
 	other->m_fd = -1;
+#else
+	m_fd = other->m_fd;
+	m_events = other->m_events;
+	other->m_fd = -1;
+	other->m_events = 0 ;
+#endif
 }
 
 int	CFileHandle::Open(const char * name,int flags)
@@ -300,24 +360,29 @@ int	CFileHandle::Close()
 
 int	CFileHandle::Write(const void * data,size_t size)
 {
-	return write(m_fd,data,size);
+	int res ;
+	res = write(m_fd,data,size);
+#ifndef _SYS_EPOLL_H
+  SetPollMask(GetPollMask()|EPOLLIN);
+#endif
+	return res ;
 }
 
 int CFileHandle::Read(void * data,size_t size)
 {
 	int n = read(m_fd,data,size);
+#ifdef _SYS_EPOLL_H
 	if (n != -1)
 	  SetPollMask(GetPollMask()|EPOLLIN);
+#else
+  SetPollMask(GetPollMask()|EPOLLIN);
+#endif
 	return n ;
 }
 
 int CFileHandle::Ioctl(int request,void * argp)
 {
-#ifdef __linux__
 	return ioctl(m_fd,request,argp);
-#else
-	return -1;
-#endif
 }
 
 void CFileHandle::SetPollMask(int mask)
@@ -327,7 +392,6 @@ void CFileHandle::SetPollMask(int mask)
 
 int CFileHandle::SetBlocking(int on)
 {
-#ifdef __linux__
 	int val = GetFlags();
 	if (val != -1)
 	{
@@ -338,7 +402,4 @@ int CFileHandle::SetBlocking(int on)
 		val = SetFlags(val);
 	}
 	return val ;
-#else
-	return -1 ;
-#endif
 }

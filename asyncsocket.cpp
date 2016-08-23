@@ -203,22 +203,39 @@ int	CAsyncSocket::Connect(const char * host,int port)
 int CAsyncSocket::Receive(void * buf,size_t size,int flags)
 {
 	int res = recv(GetHandle(),(char*)buf,size,flags);
+#ifdef _SYS_EPOLL_H
 	if (res == -1)
 		SetLastError(errno);
 	else if (res == 0)
 		OnEvent(FD_CLOSE,0);
 	else
 	  SetPollMask(GetPollMask()|EPOLLIN);
+#else
+	 if (res == 0)
+			OnEvent(FD_CLOSE,0);
+	 else
+	 {
+		 if (res == -1)
+			 SetLastError(errno);
+	  SetPollMask(GetPollMask()|EPOLLIN);
+	 }
+#endif
 	return res ;
 }
 
 int CAsyncSocket::Send(const void * buf,size_t size,int flags)
 {
 	int res = send(GetHandle(),(const char*)buf,size,flags);
+#ifdef _SYS_EPOLL_H
 	if (res == -1)
 		SetLastError(errno);
 	else
 		SetPollMask(GetPollMask()|EPOLLOUT);
+#else
+	if (res == -1)
+		SetLastError(errno);
+	SetPollMask(GetPollMask()|POLLOUT);
+#endif
 	return res ;
 }
 
