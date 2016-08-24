@@ -250,6 +250,7 @@ int CAsyncSocket::ShutDown(int how)
 
 int CAsyncSocket::Close()
 {
+	m_state = SKT_CLOSED;
 	return CFileHandle::Close();
 }
 
