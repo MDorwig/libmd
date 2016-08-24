@@ -10,6 +10,10 @@
 
 #include <pthread.h>
 
+#if defined __CYGWIN__
+#define PTHREAD_MUTEX_RECURSIVE_NP PTHREAD_MUTEX_RECURSIVE
+#endif
+
 class CMutex
 {
 public:
