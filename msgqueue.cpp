@@ -11,26 +11,12 @@ CMsg::CMsg()
 {
 }
 
-CMsg::CMsg(unsigned id,long unsigned p1,long unsigned p2,long unsigned p3)
-{
-  m_id = id ;
-  m_p1 = p1 ;
-  m_p2 = p2 ;
-  m_p3 = p3 ;
-}
-
 CMsgQueue::CMsgQueue()
 {
 }
 
 CMsgQueue::~CMsgQueue()
 {
-}
-
-unsigned CMsgQueue::CreateMessageId()
-{
-  static unsigned nextmsgid ;
-  return ++nextmsgid;
 }
 
 void CMsgQueue::PostMessage(CMsg * msg)
@@ -41,35 +27,39 @@ void CMsgQueue::PostMessage(CMsg * msg)
   m_lock.Release();
 }
 
-CMsg * CMsgQueue::PeekMessage()
+void CMsgQueue::DoInvoke()
 {
   CMsg * m = NULL;
+  m_lock.Lock();
   CListItem * i = m_list.GetHead();
   if (i != NULL)
+  {
+    m_list.Remove(i);
+    m_lock.Release();
     m = fromitem(i,CMsg,m_list);
-  return m ;
+    m->Invoke();
+  }
+  else
+    m_lock.Release();
 }
 
-CMsg * CMsgQueue::GetMessage()
+void CMsgQueue::DoWaitInvoke()
 {
   CMsg * m ;
-  while(1)
+  CListItem * item ;
+  m_lock.Lock();
+  item = m_list.GetHead();
+  while (item == NULL)
   {
-      CListItem * item ;
+      m_lock.Release();
+      m_notempty.Wait();
       m_lock.Lock();
       item = m_list.GetHead();
-      while (item == NULL)
-      {
-          m_lock.Release();
-          m_notempty.Wait();
-          m_lock.Lock();
-          item = m_list.GetHead();
-      }
-      m_list.Remove(item);
-      m_lock.Release();
-      m = fromitem(item,CMsg,m_list);
-      m->Invoke();
-      delete m ;
   }
+  m_list.Remove(item);
+  m_lock.Release();
+  m = fromitem(item,CMsg,m_list);
+  m->Invoke();
+  delete m ;
 }
 

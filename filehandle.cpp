@@ -46,14 +46,14 @@ void * CFileHandle::WorkerThread(void * p)
       nfd = filehandles.GetCount();
       pfd = (pollfd*)calloc(nfd,sizeof (pollfd));
     }
-    int i = 0;
     CListItem * item ;
+    int nactive = 0 ;
     listforeach(item,filehandles)
     {
       CFileHandle * fh = fromitem(item,CFileHandle,m_list);
       if (fh->m_fd != -1)
       {
-        pollfd * p = pfd+i;
+        pollfd * p = pfd+nactive;
         p->fd = fh->m_fd;
         p->events = 0 ;
         if (fh->m_inreq != NULL)
@@ -61,14 +61,14 @@ void * CFileHandle::WorkerThread(void * p)
         if (fh->m_outreq != NULL)
           p->events |= POLLOUT;
         if (p->events != 0)
-          i++;
+          nactive++;
       }
     }
     fflush(stdout);
-    int res = poll(pfd,i,100);
+    int res = poll(pfd,nactive,100);
     if (res > 0)
     {
-      for (int i = 0 ; i < nfd ; i++)
+      for (int i = 0 ; i < nactive ; i++)
       {
         CFileHandle * fh = filehandles.FindFd(pfd[i].fd);
         if (fh != NULL)
@@ -181,6 +181,8 @@ void CFileHandleList::Remove(CFileHandle * pfh)
 CFileHandle::CFileHandle(CMsgQueue & q) : m_msgqueue(q)
 {
 	m_fd = -1 ;
+	m_inreq = NULL;
+	m_outreq = 0 ;
 	filehandles.AddTail(this);
 }
 
