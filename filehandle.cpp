@@ -60,7 +60,7 @@ void * CFileHandle::WorkerThread(void * p)
 				struct epoll_event * pfd = m_pollmap+i ;
 				if (pfd->events)
 				{
-					pfh = (CFileHandle*)pfd->data.ptr;
+					pfh = filehandles.FindFd(pfd->data.fd);
 					if (pfh != NULL)
 					{
 						if (pfd->events & EPOLLHUP)
@@ -299,8 +299,8 @@ int CFileHandle::EPollAdd(int events)
 #ifdef _SYS_EPOLL_H
 	if (m_epoll.data.ptr == NULL)
 	{
-		m_epoll.data.ptr = this ;
-		m_epoll.events   = events|EPOLLET;
+		m_epoll.data.fd = m_fd ;
+		m_epoll.events  = events|EPOLLET;
 		res = epoll_ctl(m_epollfd,EPOLL_CTL_ADD,m_fd,&m_epoll);
 	}
 #else
@@ -323,10 +323,9 @@ int CFileHandle::EPollMod(int events)
 void CFileHandle::TakeOver(CFileHandle * other)
 {
 #ifdef _SYS_EPOLL_H
-	m_fd = other->m_fd;
-	m_epoll.data.ptr = this;
+  m_epoll.data.fd = m_fd = other->m_fd;
 	EPollMod(other->m_epoll.events);
-	other->m_epoll.data.ptr = NULL;
+	other->m_epoll.data.fd = -1;
 	other->m_epoll.events = 0 ;
 	other->m_fd = -1;
 #else
