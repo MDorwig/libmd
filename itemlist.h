@@ -50,21 +50,24 @@ public:
 
   CItemList() : m_list()
   {
-
+    m_count = 0;
   }
   void AddTail(CListItem & t)
   {
     m_list.AddTail(&m_list,&t);
+    m_count++;
   }
 
   void AddHead(CListItem & t)
   {
     m_list.AddHead(&m_list,&t);
+    m_count++;
   }
 
   void Remove(CListItem & t)
   {
     m_list.Remove(&t);
+    m_count--;
   }
 
   CListItem * GetHead()
@@ -93,8 +96,10 @@ public:
     return m_list.m_prev;
   }
 
+  unsigned Count() { return m_count;}
+private:
   CListItem m_list;
-
+  unsigned  m_count;
 };
 
 #define mbroffset(typ,mbr) (((long unsigned)(&((typ*)4)->mbr))-4)

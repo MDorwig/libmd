@@ -363,8 +363,9 @@ int	CFileHandle::Write(const void * data,size_t size)
 	int res ;
 	res = write(m_fd,data,size);
 #ifndef _SYS_EPOLL_H
-  SetPollMask(GetPollMask()|EPOLLIN);
+  SetPollMask(GetPollMask()|EPOLLOUT);
 #endif
+
 	return res ;
 }
 
