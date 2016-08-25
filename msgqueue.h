@@ -115,8 +115,8 @@ public:
 	CMsgQueue();
 	~CMsgQueue();
   CItemList m_list ;
-  CMutex  m_lock;
-  CEvent  m_notempty;
+  CMutex    m_lock;
+  CEvent    m_notempty;
   void PostMessage(unsigned id, long unsigned p1 = 0, long unsigned p2 = 0, long unsigned p3 = 0);
   void PostMessage(CMsg * item);
   void GetMessage(CMsg & item);

@@ -13,34 +13,12 @@
 class CListItem
 {
 public:
-  CListItem()
-  {
-    m_next = m_prev = this;
-  }
   CListItem * m_next ;
   CListItem * m_prev ;
 
-  static void AddTail(CListItem * list,CListItem * item)
+  CListItem()
   {
-    item->m_next = list;
-    item->m_prev = list->m_prev;
-    list->m_prev->m_next = item;
-    list->m_prev = item;
-  }
-
-  static void AddHead(CListItem * list,CListItem * item)
-  {
-    item->m_prev = list ;
-    item->m_next = list->m_next;
-    list->m_next->m_prev = item;
-    list->m_next = item ;
-  }
-
-  static void Remove(CListItem * item)
-  {
-    item->m_prev->m_next = item->m_next;
-    item->m_next->m_prev = item->m_prev;
-    item->m_prev = item->m_next = item ;
+    m_next = m_prev = NULL;
   }
 };
 
@@ -48,64 +26,63 @@ class CItemList
 {
 public:
 
-  CItemList() : m_list()
+  CListItem * m_first;
+  CListItem * m_last;
+  int m_count;
+  CItemList()
   {
+    m_first = m_last = NULL;
     m_count = 0;
   }
-  void AddTail(CListItem & t)
+
+  void AddTail(CListItem * t)
   {
-    m_list.AddTail(&m_list,&t);
+    if (m_first == NULL)
+      m_first = t ;
+    else
+    {
+      m_last->m_next = t ;
+      t->m_prev = m_last;
+    }
+    m_last = t ;
     m_count++;
   }
 
-  void AddHead(CListItem & t)
+  void Remove(CListItem * t)
   {
-    m_list.AddHead(&m_list,&t);
-    m_count++;
-  }
-
-  void Remove(CListItem & t)
-  {
-    m_list.Remove(&t);
-    m_count--;
+    if (t == m_first)
+       m_first = t->m_next;
+     if (t == m_last)
+       m_last = t->m_prev;
+     if (t->m_next != NULL)
+       t->m_next->m_prev = t->m_prev;
+     if (t->m_prev != NULL)
+       t->m_prev->m_next = t->m_next;
+     m_count--;
   }
 
   CListItem * GetHead()
   {
-    CListItem * item = m_list.m_next;
-    if (item == &m_list)
-      item = NULL;
-    return item ;
+    return m_first;
   }
 
   bool isEmpty()
   {
-    return m_list.m_next == &m_list ;
-  }
-
-  CListItem * GetNext(CListItem * item)
-  {
-    item = item->m_next;
-    if (item == &m_list)
-      item = NULL;
-    return item;
+    return m_count == 0 ;
   }
 
   CListItem * GetTail()
   {
-    return m_list.m_prev;
+    return m_last;
   }
 
   unsigned Count() { return m_count;}
-private:
-  CListItem m_list;
-  unsigned  m_count;
 };
 
 #define mbroffset(typ,mbr) (((long unsigned)(&((typ*)4)->mbr))-4)
 #define fromitem(item,typ,list) (typ*)((char*)item-mbroffset(typ,list))
 
-#define listforeach(item,list) for( item = list->m_next ; item != list ; item = item->m_next)
+#define listforeach(item,list) for( item = list.m_first ; item != NULL ; item = item->m_next)
 
 
 
