@@ -12,7 +12,7 @@
 #include "timer.h"
 #include "thread.h"
 
-static class TimerList : protected CItemList
+class TimerList : protected CItemList
 {
 public:
 
@@ -28,7 +28,9 @@ public:
   CMutex m_lock;
   CEvent m_no_empty;
 
-} timers;
+};
+
+static TimerList * timers;
 
 Timer * Timer::Next()
 {
@@ -41,7 +43,7 @@ Timer * Timer::Next()
 void Timer::Start(int interval)
 {
   m_current = m_interval = interval;
-  timers.Add(this);
+  timers->Add(this);
 }
 
 bool Timer::Timeout(int dt)
@@ -156,7 +158,6 @@ class TimerService : public CThread
 public:
   TimerService() : CThread("TimerService")
   {
-    Create();
   }
 
   void Main()
@@ -165,15 +166,15 @@ public:
     {
       Timer * t ;
       //unsigned start = getTickCount();
-      int dt = timers.Wait();
+      int dt = timers->Wait();
       //unsigned now = getTickCount();
       //printf("dt %8d ",now-start);
-      for(t = timers.First() ; t != NULL ; )
+      for(t = timers->First() ; t != NULL ; )
       {
         Timer * n = t->Next();
         if (t->Timeout(dt))
         {
-          timers.Remove(t);
+          timers->Remove(t);
           t->OnExpired();
         }
         t = n;
@@ -184,5 +185,16 @@ public:
 } ;
 
 
-static TimerService timerService;
+static TimerService * timerService;
+
+void StartTimerSerive()
+{
+  if (timers == NULL)
+    timers = new TimerList();
+  if (timerService == NULL)
+  {
+    timerService = new TimerService();
+    timerService->Create();
+  }
+}
 

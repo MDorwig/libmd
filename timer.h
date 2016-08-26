@@ -32,4 +32,6 @@ public:
   CListItem m_item;
 };
 
+void StartTimerService();
+
 #endif /* TIMER_H_ */
