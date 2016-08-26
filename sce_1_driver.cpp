@@ -9,6 +9,8 @@
 #include "thread.h"
 
 
+SceDriver SceDriver::driver;
+
 class SceDriverThread : public CThread
 {
 public:
@@ -34,7 +36,7 @@ public:
   void SendSignal(SceMsg * msg)
   {
     CMsg * m = new CMsg(sce_msgid,(long unsigned)msg);
-    m_msgqueue.PostMessage(*m);
+    m_msgqueue.PostMessage(m);
   }
 
   unsigned  sce_msgid;
@@ -54,12 +56,12 @@ void SceDriver::SendSignal(SceMsg * msg)
 
 void SceDriver::AddProcess(SceBase * proc)
 {
-  driver.procs.AddTail(proc->list);
+  driver.procs.AddTail(&proc->list);
 }
 
 void SceDriver::RemoveProcess(SceBase * proc)
 {
-  driver.procs.Remove(proc->list);
+  driver.procs.Remove(&proc->list);
 }
 
 void SceDriver::SetTraceDelegate(TraceDelegate d,void * context)
@@ -71,7 +73,7 @@ void SceDriver::SetTraceDelegate(TraceDelegate d,void * context)
 SceBase * SceDriver::Find(SceBase * val)
 {
   CListItem * item ;
-  listforeach(item,(&driver.procs.m_list))
+  listforeach(item,driver.procs)
   {
     SceBase * s = fromitem(item,SceBase,list);
     if (s == val)
@@ -94,7 +96,7 @@ SceBase * SceDriver::getFist()
 SceBase * SceDriver::getNext(SceBase * b)
 {
 	SceBase * n = NULL;
-	CListItem * item = driver.procs.GetNext(&b->list);
+	CListItem * item = b->list.m_next;
 	if (item != NULL)
 		n = fromitem(item,SceBase,list);
 	return n ;

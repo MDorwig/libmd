@@ -9,17 +9,29 @@
 #define ITEMLIST_H_
 
 #include <stddef.h>
+#include <assert.h>
 
+class CItemList;
 class CListItem
 {
 public:
   CListItem * m_next ;
   CListItem * m_prev ;
+  CItemList * m_list;
 
   CListItem()
   {
-    m_next = m_prev = NULL;
+    Init();
   }
+
+  void Init()
+  {
+    m_next = NULL;
+    m_prev = NULL;
+    m_list = NULL;
+  }
+
+  ~CListItem() ;
 };
 
 class CItemList
@@ -28,59 +40,29 @@ public:
 
   CListItem * m_first;
   CListItem * m_last;
-  int m_count;
+  int         m_count;
+
   CItemList()
   {
     m_first = m_last = NULL;
     m_count = 0;
   }
-
-  void AddTail(CListItem * t)
-  {
-    if (m_first == NULL)
-      m_first = t ;
-    else
-    {
-      m_last->m_next = t ;
-      t->m_prev = m_last;
-    }
-    m_last = t ;
-    m_count++;
-  }
-
+  /*
+   * Add item to end of list
+   */
+  virtual void AddTail(CListItem * t);
   /*
    * Add item b before item a
    */
-  void AddBefore(CListItem * a,CListItem * b)
-  {
-    if (a->m_prev != NULL)
-    {
-      a->m_prev->m_next = b ;
-      b->m_prev = a->m_prev;
-    }
-    else
-    {
-      m_first = b ;
-    }
-    a->m_prev = b ;
-    b->m_next = a;
-    m_count++;
-  }
-
-  void Remove(CListItem * t)
-  {
-    if (t == m_first)
-       m_first = t->m_next;
-     if (t == m_last)
-       m_last = t->m_prev;
-     if (t->m_next != NULL)
-       t->m_next->m_prev = t->m_prev;
-     if (t->m_prev != NULL)
-       t->m_prev->m_next = t->m_next;
-     t->m_next = NULL;
-     t->m_prev = NULL;
-     m_count--;
-  }
+  virtual void AddBefore(CListItem * a,CListItem * b);
+  /*
+   * Add item to begin of list
+   */
+  virtual void AddHead(CListItem * t);
+  /*
+   * Remove item from list
+   */
+  virtual void Remove(CListItem * t);
 
   CListItem * GetHead()
   {

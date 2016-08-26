@@ -44,8 +44,9 @@ private:
 
 template<class cls> class MsgDelegate0 : public CMsg
 {
+public:
   typedef void (cls::*callback)(void);
-
+private:
   bool Invoke()
   {
     (m_obj->*m_callback)();

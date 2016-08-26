@@ -12,7 +12,6 @@
 
 int SceBase::nextpid;
 
-SceDriver SceDriver::driver;
 static SceBase   sceroot;
 
 #if 0
@@ -59,6 +58,11 @@ int SceBase::Trace(const char * fmt,...)
   n = SceDriver::Trace(fmt,lst);
   va_end(lst);
   return n ;
+}
+
+const char * GetSignalName(int signo)
+{
+  return "unknown signal";
 }
 
 SceBase::~SceBase()
