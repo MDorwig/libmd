@@ -48,6 +48,24 @@ public:
     m_count++;
   }
 
+  /*
+   * Add item b before item a
+   */
+  void AddBefore(CListItem * a,CListItem * b)
+  {
+    if (a->m_prev != NULL)
+    {
+      a->m_prev->m_next = b ;
+      b->m_prev = a->m_prev;
+    }
+    else
+    {
+      m_first = b ;
+    }
+    a->m_prev = b ;
+    b->m_next = a;
+  }
+
   void Remove(CListItem * t)
   {
     if (t == m_first)
@@ -82,7 +100,7 @@ public:
 #define mbroffset(typ,mbr) (((long unsigned)(&((typ*)4)->mbr))-4)
 #define fromitem(item,typ,list) (typ*)((char*)item-mbroffset(typ,list))
 
-#define listforeach(item,list) for( item = list.m_first ; item != NULL ; item = item->m_next)
+#define listforeach(item,list) for( item = (list).m_first ; item != NULL ; item = item->m_next)
 
 
 
