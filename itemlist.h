@@ -77,6 +77,8 @@ public:
        t->m_next->m_prev = t->m_prev;
      if (t->m_prev != NULL)
        t->m_prev->m_next = t->m_next;
+     t->m_next = NULL;
+     t->m_prev = NULL;
      m_count--;
   }
 
