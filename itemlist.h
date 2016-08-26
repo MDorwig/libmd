@@ -64,6 +64,7 @@ public:
     }
     a->m_prev = b ;
     b->m_next = a;
+    m_count++;
   }
 
   void Remove(CListItem * t)
