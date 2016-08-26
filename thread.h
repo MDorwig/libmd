@@ -17,7 +17,7 @@ public:
   CThread(const char * name);
   virtual ~CThread() {}
   void       Create();
-  virtual void Main();
+  virtual void Main() = 0;
 protected:
   static void * Run(void * arg);
   char *    m_name;
