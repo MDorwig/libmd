@@ -15,19 +15,22 @@
 class TimerList : protected CItemList
 {
 public:
+            TimerList()
+            {
+              m_twait = 0;
+            }
 
-  void    Remove(CListItem * l);
+  void      Remove(CListItem * l);
 
-  void    Add(Timer *t);
-  Timer * Find(Timer * t);
-  void    Remove(Timer * t);
-  Timer * First();
-  int     Wait();
-  void    Show(bool reverse);
-
-  CMutex m_lock;
-  CEvent m_no_empty;
-
+  void      Add(Timer *t);
+  Timer *   Find(Timer * t);
+  void      Remove(Timer * t, bool signal_change = true);
+  Timer *   First();
+  int       Wait();
+  void      Show(bool reverse);
+  CMutex    m_lock;
+  CEvent    m_listchanged;
+  unsigned  m_twait;
 };
 
 static TimerList * timers;
@@ -40,21 +43,31 @@ Timer * Timer::Next()
   return n;
 }
 
+Timer::Timer()
+{
+  m_interval = 0;
+}
+
+Timer::~Timer()
+{
+
+}
+
 void Timer::Start(int interval)
 {
-  m_current = m_interval = interval;
+  m_interval = interval;
+  if (m_item.m_list != NULL)
+    timers->Remove(this);
   timers->Add(this);
 }
 
-bool Timer::Timeout(int dt)
+void Timer::Stop()
 {
-  m_current -= dt;
-  return m_current <= 0;
+  timers->Remove(this);
 }
 
 void Timer::OnExpired()
 {
-
 }
 
 void TimerList::Remove(CListItem * l)
@@ -67,11 +80,28 @@ void TimerList::Remove(CListItem * l)
 void TimerList::Add(Timer *t)
 {
   CListItem * item;
+  unsigned now = getTickCount();
   m_lock.Lock();
+  if (Count() != 0)
+  {
+    /* Anpassung : timeout verlängern
+       Beispiel:
+       wenn der letzte Wait() um 1000(m_twait) war, die waittime 500 ist und now ist 1200 und interval = 1000
+       dann muss das interval um 1200(now) - 1000(m_twait) = 200 verlängert werden, damit der timer um 1200(now) + 1000(interval) = 2200 abläuft
+    */
+    t->m_interval += now - m_twait;
+  }
+  else
+  {
+    /*
+     * m_twait auf now setzen, damit es gültig ist, wenn Add nochmal aufgerufen wird bevor der Timerthread wieder laufen konnte
+     */
+    m_twait = now;
+  }
   listforeach(item,*this)
   {
     Timer * i = fromitem(item,Timer,m_item);
-    if (t->m_current < i->m_current)
+    if (t->m_interval < i->m_interval)
     {
       AddBefore(&i->m_item,&t->m_item);
       break;
@@ -79,7 +109,7 @@ void TimerList::Add(Timer *t)
   }
   if (item == NULL)
     AddTail(&t->m_item);
-  m_no_empty.Set();
+  m_listchanged.Set();
   m_lock.Release();
 }
 
@@ -100,14 +130,14 @@ Timer * TimerList::Find(Timer * t)
   return r ;
 }
 
-void TimerList::Remove(Timer * t)
+void TimerList::Remove(Timer * t,bool signal_change)
 {
   if (Find(t) != NULL)
   {
     m_lock.Lock();
     Remove(&t->m_item);
-    if (Count() == 0)
-      m_no_empty.Reset();
+    if (signal_change)
+      m_listchanged.Set();
     m_lock.Release();
   }
 }
@@ -122,12 +152,24 @@ Timer * TimerList::First()
 
 int TimerList::Wait()
 {
-  if (Count() == 0)
-    m_no_empty.Wait();
-  Timer * t = First();
-  int wt = t->m_current;
-  usleep(wt*1000);
-  return wt ;
+  unsigned waittime;
+  int      dt ;
+  do
+  {
+    waittime = WAIT_INFINITE;
+    m_lock.Lock();
+    Timer * t = First();
+    if (t != NULL)
+      waittime = t->m_interval;
+    m_lock.Release();
+    m_twait = getTickCount();
+#ifdef LIBMD_TIMER_DEBUG
+    printf("%10d wait %d\n",m_twait,waittime);
+#endif
+    m_listchanged.Wait(waittime); // kommt zurück, wenn waittime abgelaufen ist, oder die Liste veränder wurde
+    dt = getTickCount() - m_twait ; // wie lange gewartet wurde
+  } while (waittime == WAIT_INFINITE);
+  return dt ;
 }
 
 void TimerList::Show(bool reverse)
@@ -139,7 +181,7 @@ void TimerList::Show(bool reverse)
     listforeach(item,*this)
     {
       Timer * t = fromitem(item,Timer,m_item);
-      printf("t=%4d/%4d ",t->m_current,t->m_interval);
+      printf("t=%4d ",t->m_interval);
     }
   }
   else
@@ -147,7 +189,7 @@ void TimerList::Show(bool reverse)
     for (item = m_last ; item != NULL ; item = item->m_prev)
     {
       Timer * t = fromitem(item,Timer,m_item);
-      printf("t=%4d/%4d ",t->m_current,t->m_interval);
+      printf("t=%4d ",t->m_interval);
     }
   }
   printf("} End\n");
@@ -165,21 +207,27 @@ public:
     while(1)
     {
       Timer * t ;
-      //unsigned start = getTickCount();
       int dt = timers->Wait();
-      //unsigned now = getTickCount();
-      //printf("dt %8d ",now-start);
+#ifdef LIBMD_TIMER_DEBUG
+      printf("%10d {",getTickCount());
+#endif
       for(t = timers->First() ; t != NULL ; )
       {
         Timer * n = t->Next();
-        if (t->Timeout(dt))
+        t->m_interval -= dt ;
+#ifdef LIBMD_TIMER_DEBUG
+        printf("rest %d ",t->m_interval);
+#endif
+        if (t->m_interval <= 0)
         {
-          timers->Remove(t);
+          timers->Remove(t,false);
           t->OnExpired();
         }
         t = n;
       }
-      //printf("\n");
+#ifdef LIBMD_TIMER_DEBUG
+      printf("}\n");
+#endif
     }
   }
 } ;
@@ -187,10 +235,13 @@ public:
 
 static TimerService * timerService;
 
-void StartTimerSerive()
+void StartTimerService()
 {
   if (timers == NULL)
+  {
+    getTickCount();
     timers = new TimerList();
+  }
   if (timerService == NULL)
   {
     timerService = new TimerService();
@@ -198,3 +249,10 @@ void StartTimerSerive()
   }
 }
 
+void ListTimer()
+{
+  if (timers != NULL)
+  {
+    timers->Show(false);
+  }
+}

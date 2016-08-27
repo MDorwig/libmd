@@ -9,6 +9,7 @@
 #define MDMT_H_
 
 #include <pthread.h>
+#include <stdint.h>
 
 #if defined __CYGWIN__
 #define PTHREAD_MUTEX_RECURSIVE_NP PTHREAD_MUTEX_RECURSIVE
@@ -26,6 +27,7 @@ private:
 	pthread_mutex_t m_lock ;
 };
 
+#define WAIT_INFINITE UINT32_MAX
 
 class CCondition
 {
@@ -33,7 +35,8 @@ public:
 	CCondition();
 	~CCondition();
 	int Signal();
-	int Wait(CMutex & mtx);
+	int Wait(CMutex & mtx,unsigned time = WAIT_INFINITE);
+
 private:
 	pthread_cond_t m_cond ;
 };
@@ -41,37 +44,16 @@ private:
 class CEvent
 {
 public:
-	CEvent();
-	~CEvent();
+	    CEvent();
+	    ~CEvent();
 	int Set();
 	int Reset();
 	int	IsSet();
-	int	Wait();
+	int	Wait(unsigned time = WAIT_INFINITE);
 private:
 	CMutex 			m_lock ;
 	CCondition 	m_cond ;
 	int					m_state;
 };
 
-class CTimer
-{
-
-};
-
-#include "msgqueue.h"
-
-/*
-class CThread
-{
-public:
-  CThread(const char * name);
-  void       Create();
-  virtual void Main();
-private:
-  static void * Run(void * arg);
-  char *    m_name;
-  pthread_t m_id ;
-  CMsgQueue m_msgqueue;
-};
-*/
 #endif /* MDMT_H_ */

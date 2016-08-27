@@ -9,7 +9,7 @@
 #include "thread.h"
 
 
-SceDriver SceDriver::driver;
+SceDriver * SceDriver::driver;
 
 class SceDriverThread : public CThread
 {
@@ -46,6 +46,7 @@ static SceDriverThread * scedriverthread;
 
 SceDriver::SceDriver()
 {
+  driver = this;
   scedriverthread = new SceDriverThread() ;
 }
 
@@ -56,24 +57,24 @@ void SceDriver::SendSignal(SceMsg * msg)
 
 void SceDriver::AddProcess(SceBase * proc)
 {
-  driver.procs.AddTail(&proc->list);
+  driver->procs.AddTail(&proc->list);
 }
 
 void SceDriver::RemoveProcess(SceBase * proc)
 {
-  driver.procs.Remove(&proc->list);
+  driver->procs.Remove(&proc->list);
 }
 
 void SceDriver::SetTraceDelegate(TraceDelegate d,void * context)
 {
-  driver.tracefunc = d ;
-  driver.tracecontext = context;
+  driver->tracefunc = d ;
+  driver->tracecontext = context;
 }
 
 SceBase * SceDriver::Find(SceBase * val)
 {
   CListItem * item ;
-  listforeach(item,driver.procs)
+  listforeach(item,driver->procs)
   {
     SceBase * s = fromitem(item,SceBase,list);
     if (s == val)
@@ -85,7 +86,7 @@ SceBase * SceDriver::Find(SceBase * val)
 SceBase * SceDriver::getFist()
 {
 	SceBase * b = NULL;
-	CListItem * item = driver.procs.GetHead();
+	CListItem * item = driver->procs.GetHead();
 	if (item != NULL)
 	{
 		b = fromitem(item,SceBase,list);
@@ -105,11 +106,11 @@ SceBase * SceDriver::getNext(SceBase * b)
 int  SceDriver::Trace(const char * fmt,...)
 {
   int i = 0 ;
-  if (driver.tracefunc != NULL)
+  if (driver->tracefunc != NULL)
   {
     va_list lst ;
     va_start(lst,fmt);
-    i = driver.tracefunc(driver.tracecontext,fmt,lst);
+    i = driver->tracefunc(driver->tracecontext,fmt,lst);
     va_end(lst);
   }
   return i ;
@@ -118,9 +119,9 @@ int  SceDriver::Trace(const char * fmt,...)
 int  SceDriver::Trace(const char * fmt,va_list lst)
 {
   int i = 0 ;
-  if (driver.tracefunc != NULL)
+  if (driver->tracefunc != NULL)
   {
-    i = driver.tracefunc(driver.tracecontext,fmt,lst);
+    i = driver->tracefunc(driver->tracecontext,fmt,lst);
   }
   return i ;
 }

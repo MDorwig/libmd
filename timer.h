@@ -14,24 +14,18 @@
 class Timer
 {
 public:
-  Timer(int interval = 0)
-  {
-    m_interval = m_current = interval;
-  }
-
-  Timer * Next();
-
+              Timer();
+  virtual    ~Timer();
+  Timer *      Next();
   virtual void Start(int interval);
-
-  bool Timeout(int dt);
-
+  void         Stop();
   virtual void OnExpired();
 
-  int m_interval;
-  int m_current ;
+  int  m_interval;
   CListItem m_item;
 };
 
 void StartTimerService();
+void ListTimer();
 
 #endif /* TIMER_H_ */

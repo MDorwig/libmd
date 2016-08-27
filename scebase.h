@@ -93,7 +93,7 @@ protected:
   CItemList timers;
   TraceDelegate tracefunc;
   void        * tracecontext;
-  static SceDriver driver;
+  static SceDriver * driver;
 };
 
 class SceMsg

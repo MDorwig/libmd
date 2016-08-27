@@ -12,7 +12,7 @@
 
 int SceBase::nextpid;
 
-static SceBase   sceroot;
+static SceBase   * sceroot;
 
 #if 0
 SceBase::SceBase() : SceBase(NULL,"root")
@@ -32,7 +32,7 @@ SceBase::SceBase(SceBase * fparent,const char * fname)
 
 SceBase * SceBase::getRoot()
 {
-	return & sceroot;
+	return sceroot;
 }
 
 void SceBase::setState(int st)

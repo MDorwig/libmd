@@ -64,7 +64,7 @@ public:
    */
   virtual void Remove(CListItem * t);
 
-  CListItem * GetHead()
+  CListItem *  GetHead()
   {
     return m_first;
   }
@@ -74,7 +74,7 @@ public:
     return m_count == 0 ;
   }
 
-  CListItem * GetTail()
+  CListItem *  GetTail()
   {
     return m_last;
   }

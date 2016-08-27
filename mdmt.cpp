@@ -5,9 +5,12 @@
  *      Author: dorwig
  */
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <errno.h>
 #include <assert.h>
+#include <stdint.h>
 #include "msgqueue.h"
 #include "thread.h"
 
@@ -51,6 +54,7 @@ CCondition::CCondition()
 {
 	pthread_condattr_t attr;
 	pthread_condattr_init(&attr);
+	pthread_condattr_setclock(&attr,CLOCK_MONOTONIC);
 	pthread_cond_init(&m_cond,&attr);
 }
 
@@ -64,9 +68,30 @@ int CCondition::Signal()
 	return pthread_cond_signal(&m_cond) ;
 }
 
-int CCondition::Wait(CMutex & mtx)
+int CCondition::Wait(CMutex & mtx,unsigned time)
 {
-	return pthread_cond_wait(&m_cond,&mtx.m_lock);
+  int res ;
+  if (time != UINT32_MAX)
+  {
+
+    timespec ts ;
+
+    clock_gettime(CLOCK_MONOTONIC,&ts);
+
+    ts.tv_sec += time / 1000;
+    ts.tv_nsec+= (time % 1000) * 1000000;
+    if (ts.tv_nsec >= 1000000000)
+    {
+      ts.tv_sec += 1 ;
+      ts.tv_nsec-= 1000000000;
+    }
+
+    res = pthread_cond_timedwait(&m_cond,&mtx.m_lock,&ts);
+    assert (res == 0 || res == ETIMEDOUT);
+  }
+  else
+    res = pthread_cond_wait(&m_cond,&mtx.m_lock);
+  return res ;
 }
 
 CEvent::CEvent()
@@ -96,15 +121,15 @@ int CEvent::Reset()
 	return 0;
 }
 
-int CEvent::Wait()
+int CEvent::Wait(unsigned timeout)
 {
-	int res = 0;
-	m_lock.Lock();
-	if (m_state == 0)
-	  res = m_cond.Wait(m_lock);
-	Reset();
-	m_lock.Release();
-	return res ;
+  int res = 0;
+  m_lock.Lock();
+  if (m_state == 0)
+    res = m_cond.Wait(m_lock,timeout);
+  m_state = 0;
+  m_lock.Release();
+  return res ;
 }
 
 CThread::CThread(const char * name)
