@@ -12,7 +12,7 @@
 #include "timer.h"
 #include "thread.h"
 
-class TimerList : protected CItemList
+class TimerList : public LockedTypedItemList<Timer,offsetof(Timer,m_item)>
 {
 public:
             TimerList()
@@ -28,20 +28,11 @@ public:
   Timer *   First();
   int       Wait();
   void      Show(bool reverse);
-  CMutex    m_lock;
   CEvent    m_listchanged;
   unsigned  m_twait;
 };
 
 static TimerList * timers;
-
-Timer * Timer::Next()
-{
-  Timer * n = NULL;
-  if (m_item.m_next != NULL)
-    n = fromitem(m_item.m_next,Timer,m_item);
-  return n;
-}
 
 Timer::Timer()
 {
@@ -70,18 +61,10 @@ void Timer::OnExpired()
 {
 }
 
-void TimerList::Remove(CListItem * l)
-{
-  m_lock.Lock();
-  CItemList::Remove(l);
-  m_lock.Release();
-}
-
 void TimerList::Add(Timer *t)
 {
-  CListItem * item;
   unsigned now = getTickCount();
-  m_lock.Lock();
+  Lock();
   if (Count() != 0)
   {
     /* Anpassung : timeout verlängern
@@ -98,56 +81,46 @@ void TimerList::Add(Timer *t)
      */
     m_twait = now;
   }
-  listforeach(item,*this)
+  Timer * i ;
+  for (i = GetHead(); i != NULL ; i = GetNext(i))
   {
-    Timer * i = fromitem(item,Timer,m_item);
     if (t->m_interval < i->m_interval)
     {
-      AddBefore(&i->m_item,&t->m_item);
+      AddBefore(i,t);
       break;
     }
   }
-  if (item == NULL)
-    AddTail(&t->m_item);
+  if (i == NULL)
+    AddTail(t);
   m_listchanged.Set();
-  m_lock.Release();
+  Unlock();
 }
 
 Timer * TimerList::Find(Timer * t)
 {
-  Timer * r = NULL;
-  CListItem * item;
-  m_lock.Lock();
-  listforeach(item,*this)
+  Timer * i;
+  Lock();
+  for (i = GetHead() ; i != NULL ; i = GetNext(i))
   {
-    if (item == &t->m_item)
+    if (i == t)
     {
-      r = t ;
       break ;
     }
   }
-  m_lock.Release();
-  return r ;
+  Unlock();
+  return i ;
 }
 
 void TimerList::Remove(Timer * t,bool signal_change)
 {
   if (Find(t) != NULL)
   {
-    m_lock.Lock();
-    Remove(&t->m_item);
+    Lock();
+    Remove(t);
     if (signal_change)
       m_listchanged.Set();
-    m_lock.Release();
+    Unlock();
   }
-}
-
-Timer * TimerList::First()
-{
-  Timer * t = NULL;
-  if (m_first != NULL)
-    t = fromitem(m_first,Timer,m_item);
-  return t ;
 }
 
 int TimerList::Wait()
@@ -157,11 +130,11 @@ int TimerList::Wait()
   do
   {
     waittime = WAIT_INFINITE;
-    m_lock.Lock();
-    Timer * t = First();
+    Lock();
+    Timer * t = GetHead();
     if (t != NULL)
       waittime = t->m_interval;
-    m_lock.Release();
+    Unlock();
     m_twait = getTickCount();
 #ifdef LIBMD_TIMER_DEBUG
     printf("%10d wait %d\n",m_twait,waittime);
@@ -174,21 +147,19 @@ int TimerList::Wait()
 
 void TimerList::Show(bool reverse)
 {
-  CListItem * item ;
+  Timer * t;
   printf("Start { ");
   if (!reverse)
   {
-    listforeach(item,*this)
+    listforeach(t,*this)
     {
-      Timer * t = fromitem(item,Timer,m_item);
       printf("t=%4d ",t->m_interval);
     }
   }
   else
   {
-    for (item = m_last ; item != NULL ; item = item->m_prev)
+    listforeachrev(t,*this)
     {
-      Timer * t = fromitem(item,Timer,m_item);
       printf("t=%4d ",t->m_interval);
     }
   }

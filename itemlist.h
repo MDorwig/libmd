@@ -88,11 +88,11 @@ public:
   unsigned Count() { return m_count;}
 };
 
-#define fromitem(item,typ,field) item == NULL ? NULL : ((typ*)((char*)item-offsetof(typ,field)))
+//#define fromitem(item,typ,field) item == NULL ? NULL : ((typ*)((char*)item-offsetof(typ,field)))
 #define suboffset(item,typ,offset) item == NULL ? NULL : ((typ*)((char*)item-offset))
 #define addoffset(elem,offset) ((CListItem*)(((char*)elem)+offset))
 
-template <class ElementType, const int offset_of_listitem> class TypedItemList : CItemList
+template <class ElementType, const int offset_of_listitem> class TypedItemList : public CItemList
 {
 public:
   virtual void AddTail(ElementType * t)
@@ -130,6 +130,13 @@ public:
     if (e == NULL)
       return NULL;
     return suboffset(addoffset(e,offset_of_listitem)->m_next,ElementType,offset_of_listitem);
+  }
+
+  virtual ElementType *  GetPrev(ElementType * e)
+  {
+    if (e == NULL)
+      return NULL;
+    return suboffset(addoffset(e,offset_of_listitem)->m_prev,ElementType,offset_of_listitem);
   }
 };
 
@@ -179,8 +186,8 @@ public:
 };
 
 
-#define listforeach(item,list) for( item = (list).m_first ; item != NULL ; item = item->m_next)
-
+#define listforeach(item,list) for( item = (list).GetHead() ; item != NULL ; item = (list).GetNext(item))
+#define listforeachrev(item,list) for(item = (list).GetTail() ; item != NULL ; item = (list).GetPrev(item))
 
 
 #endif /* ITEMLIST_H_ */
