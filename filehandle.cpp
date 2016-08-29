@@ -12,28 +12,18 @@
 #include "filehandle.h"
 #include "mdmt.h"
 
-class CFileHandleList
+typedef LockedTypedItemList<CFileHandle,offsetof(CFileHandle,m_workitem)> WorkingHandleList ;
+typedef LockedTypedItemList<CFileHandle,offsetof(CFileHandle,m_deleteitem)> PendingDeleteList ;
+
+class CFileHandleList : public WorkingHandleList
 {
 public:
-	CFileHandleList();
-	~CFileHandleList();
-	void					Lock();
-	void					Unlock();
-	CFileHandle * GetFirst() { return m_first;}
-	CFileHandle * GetLast()  { return m_last; }
-	void					AddTail(CFileHandle * pfh);
-	void					Remove(CFileHandle * pfh);
+  void          AddTail(CFileHandle * pfh);
 	int 					Find(CFileHandle * pfh);
 	CFileHandle * FindFd(int fd);
-	int						GetCount() { return m_count;}
 private:
-	CFileHandle * 	m_first;
-	CFileHandle * 	m_last ;
-	int							m_count;
-	pthread_mutex_t m_lock;
 };
 
-static CFileHandleList filehandles ;
 #ifdef _SYS_EPOLL_H
 struct epoll_event CFileHandle::m_pollmap[256];
 int CFileHandle::m_epollfd;
@@ -41,9 +31,10 @@ int CFileHandle::m_epollfd;
 struct pollfd CFileHandle::m_pollmap[256];
 #endif
 
-pthread_t fhworker;
-
-CEvent FileHandleListEvent ;
+static pthread_t fhworker;
+static CFileHandleList filehandles ;
+static PendingDeleteList deletehandles;
+static CEvent FileHandleListEvent ;
 
 void * CFileHandle::WorkerThread(void * p)
 {
@@ -84,6 +75,10 @@ void * CFileHandle::WorkerThread(void * p)
 						}
 					}
 				}
+			}
+			while ((pfh = deletehandles.GetHead()) != NULL)
+			{
+			    delete pfh;
 			}
 		}
 #else
@@ -142,47 +137,12 @@ void InitFileHandleWorker()
 	pthread_create(&fhworker,&attr,CFileHandle::WorkerThread,NULL);
 }
 
-CFileHandleList::CFileHandleList()
-{
-	pthread_mutexattr_t attr;
-	pthread_mutexattr_init(&attr);
-	pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE_NP);
-	pthread_mutex_init(&m_lock,&attr);
-	m_first= NULL;
-	m_last = NULL;
-}
-
-CFileHandleList::~CFileHandleList()
-{
-	pthread_mutex_destroy(&m_lock);
-}
-
-void CFileHandleList::Lock()
-{
-	pthread_mutex_lock(&m_lock);
-}
-
-void CFileHandleList::Unlock()
-{
-	pthread_mutex_unlock(&m_lock);
-}
-
 void CFileHandleList::AddTail(CFileHandle * pfh)
 {
 	Lock();
 	if (fhworker == 0)
 		InitFileHandleWorker();
-	if (m_first == NULL)
-	{
-		m_first = pfh ;
-	}
-	else
-	{
-		m_last->m_next = pfh ;
-		pfh->m_prev = m_last;
-	}
-	m_last = pfh ;
-	m_count++;
+	WorkingHandleList::AddTail(pfh);
 	Unlock();
 }
 
@@ -191,7 +151,7 @@ int CFileHandleList::Find(CFileHandle * pfh)
 	int res = 0 ;
 	CFileHandle * p ;
 	Lock();
-	for (p = GetFirst() ; p != NULL ; p = p->GetNext())
+	for (p = GetHead() ; p != NULL ; p = GetNext(p))
 	{
 		if (p == pfh)
 		{
@@ -207,34 +167,18 @@ CFileHandle * CFileHandleList::FindFd(int fd)
 {
 	CFileHandle * p = NULL;
 	Lock();
-	for (p = GetFirst() ; p != NULL ; p = p->GetNext())
+	for (p = GetHead() ; p != NULL ; p = GetNext(p))
 	{
-		if (p->m_fd == fd)
+		if (p->GetHandle() == fd)
 			break;
 	}
 	Unlock();
 	return p ;
 }
 
-void CFileHandleList::Remove(CFileHandle * pfh)
-{
-	Lock();
-	if (pfh == m_first)
-		m_first = pfh->m_next;
-	if (pfh == m_last)
-		m_last = pfh->m_prev;
-	if (pfh->m_next != NULL)
-			pfh->m_next->m_prev = pfh->m_prev;
-	if (pfh->m_prev != NULL)
-			pfh->m_prev->m_next = pfh->m_next;
-	m_count--;
-	Unlock();
-}
 
 CFileHandle::CFileHandle()
 {
-	m_next = NULL;
-	m_prev = NULL;
 	m_fd = -1 ;
 #ifdef _SYS_EPOLL_H
 	m_epoll.events   = 0;
@@ -248,7 +192,11 @@ CFileHandle::CFileHandle()
 CFileHandle::~CFileHandle()
 {
 	Close();
-	filehandles.Remove(this);
+}
+
+void CFileHandle::Destroy()
+{
+  deletehandles.AddTail(this);
 }
 
 void CFileHandle::InitEpoll()

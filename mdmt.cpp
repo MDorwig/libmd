@@ -54,7 +54,6 @@ CCondition::CCondition()
 {
 	pthread_condattr_t attr;
 	pthread_condattr_init(&attr);
-	pthread_condattr_setclock(&attr,CLOCK_MONOTONIC);
 	pthread_cond_init(&m_cond,&attr);
 }
 
@@ -76,7 +75,7 @@ int CCondition::Wait(CMutex & mtx,unsigned time)
 
     timespec ts ;
 
-    clock_gettime(CLOCK_MONOTONIC,&ts);
+    clock_gettime(CLOCK_REALTIME,&ts);
 
     ts.tv_sec += time / 1000;
     ts.tv_nsec+= (time % 1000) * 1000000;

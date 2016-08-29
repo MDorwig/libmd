@@ -11,11 +11,14 @@
 #define EPOLLET  0
 #endif
 
+#include "itemlist.h"
+
 class CFileHandle
 {
 public:
 								CFileHandle();
 	virtual				~CFileHandle();
+	void          Destroy();
 	void					Attach(int fd,int events);
 	int						GetHandle() { return m_fd;}
 	int						Open(const char * name,int flags);
@@ -26,6 +29,11 @@ public:
 	int						GetFlags();
 	int						SetFlags(int value);
 	int						SetBlocking(int on);
+	/*
+	 * in diesen Funktionen
+	 * darf kein delete this gemacht werden
+	 * Destroy() ist zwingend, wenn das Object gelöscht werden soll
+	 */
 	virtual void 	OnPollErr()= 0;
 	virtual void 	OnPollHup()= 0;
 	virtual void 	OnPollIn() = 0;
@@ -40,12 +48,11 @@ public:
 	int 					EPollAdd(int events);
 	int 					EPollMod(int events);
 	void          TakeOver(CFileHandle * other);
-	CFileHandle * GetNext() { return m_next;}
 	static void * WorkerThread(void * arg);
 	static void   InitEpoll();
+  CListItem     m_workitem;
+  CListItem     m_deleteitem;
 protected:
-	CFileHandle	*	m_next;
-	CFileHandle	*	m_prev;
 #ifdef _SYS_EPOLL_H
 	epoll_event 	m_epoll;
 #else
@@ -53,7 +60,6 @@ protected:
 #endif
 private:
 	int						m_fd ;
-	friend class CFileHandleList;
 #ifdef _SYS_EPOLL_H
 	static int		m_epollfd;
 	static struct epoll_event m_pollmap[256];
