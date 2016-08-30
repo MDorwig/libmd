@@ -52,17 +52,15 @@ void CMsgQueue::PostMessage(unsigned id,long unsigned p1,long unsigned p2,long u
 void CMsgQueue::GetMessage(CMsg & msg)
 {
   CMsg * m ;
-  CListItem * item ;
   m_lock.Lock();
-  item = m_list.GetHead();
-  while (item == NULL)
+  m = m_list.GetHead();
+  while (m == NULL)
   {
     m_lock.Release();
     m_notempty.Wait();
     m_lock.Lock();
-    item = m_list.GetHead();
+    m = m_list.GetHead();
   }
-  m = static_cast<CMsg*>(item);
   m_list.Remove(m);
   m_lock.Release();
   if (m->Invoke())

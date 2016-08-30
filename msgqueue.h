@@ -11,7 +11,7 @@
 #include "itemlist.h"
 #include "mdmt.h"
 
-class CMsg : public CListItem
+class CMsg
 {
 public:
   CMsg();
@@ -35,6 +35,7 @@ public:
     return false;
   }
 
+  CListItem        list;
 private:
   unsigned         m_id ;
   long unsigned    m_p1 ;
@@ -115,7 +116,7 @@ class CMsgQueue
 public:
 	CMsgQueue();
 	~CMsgQueue();
-  CItemList m_list ;
+  TypedItemList<CMsg,offsetof(CMsg,list)> m_list ;
   CMutex    m_lock;
   CEvent    m_notempty;
   void PostMessage(unsigned id, long unsigned p1 = 0, long unsigned p2 = 0, long unsigned p3 = 0);

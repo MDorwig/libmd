@@ -89,7 +89,7 @@ public:
   static int  Trace(const char * fmt,...) __attribute__((format (printf, 1, 2)));
   static int  Trace(const char * fmt,va_list lst);
 protected:
-  CItemList procs ;
+  LockedTypedItemList<SceBase,offsetof(SceBase,list)> procs ;
   CItemList timers;
   TraceDelegate tracefunc;
   void        * tracecontext;

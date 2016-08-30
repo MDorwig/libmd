@@ -57,12 +57,12 @@ void SceDriver::SendSignal(SceMsg * msg)
 
 void SceDriver::AddProcess(SceBase * proc)
 {
-  driver->procs.AddTail(&proc->list);
+  driver->procs.AddTail(proc);
 }
 
 void SceDriver::RemoveProcess(SceBase * proc)
 {
-  driver->procs.Remove(&proc->list);
+  driver->procs.Remove(proc);
 }
 
 void SceDriver::SetTraceDelegate(TraceDelegate d,void * context)
@@ -73,10 +73,9 @@ void SceDriver::SetTraceDelegate(TraceDelegate d,void * context)
 
 SceBase * SceDriver::Find(SceBase * val)
 {
-  CListItem * item ;
-  listforeach(item,driver->procs)
+  SceBase * s;
+  listforeach(s,driver->procs)
   {
-    SceBase * s = fromitem(item,SceBase,list);
     if (s == val)
       return val ;
   }
@@ -85,22 +84,12 @@ SceBase * SceDriver::Find(SceBase * val)
 
 SceBase * SceDriver::getFist()
 {
-	SceBase * b = NULL;
-	CListItem * item = driver->procs.GetHead();
-	if (item != NULL)
-	{
-		b = fromitem(item,SceBase,list);
-	}
-	return b ;
+	return driver->procs.GetHead();
 }
 
 SceBase * SceDriver::getNext(SceBase * b)
 {
-	SceBase * n = NULL;
-	CListItem * item = b->list.m_next;
-	if (item != NULL)
-		n = fromitem(item,SceBase,list);
-	return n ;
+	return driver->procs.GetNext(b);
 }
 
 int  SceDriver::Trace(const char * fmt,...)

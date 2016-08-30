@@ -26,6 +26,6 @@ public:
 };
 
 void StartTimerService();
-void ListTimer();
+void ListTimer(bool rev = false);
 
 #endif /* TIMER_H_ */

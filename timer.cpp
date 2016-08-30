@@ -14,18 +14,12 @@
 
 class TimerList : public LockedTypedItemList<Timer,offsetof(Timer,m_item)>
 {
+  typedef LockedTypedItemList<Timer,offsetof(Timer,m_item)> Base;
 public:
-            TimerList()
-            {
-              m_twait = 0;
-            }
-
-  void      Remove(CListItem * l);
-
+            TimerList() { m_twait = 0; }
   void      Add(Timer *t);
   Timer *   Find(Timer * t);
   void      Remove(Timer * t, bool signal_change = true);
-  Timer *   First();
   int       Wait();
   void      Show(bool reverse);
   CEvent    m_listchanged;
@@ -116,7 +110,7 @@ void TimerList::Remove(Timer * t,bool signal_change)
   if (Find(t) != NULL)
   {
     Lock();
-    Remove(t);
+    Base::Remove(t);
     if (signal_change)
       m_listchanged.Set();
     Unlock();
@@ -182,9 +176,9 @@ public:
 #ifdef LIBMD_TIMER_DEBUG
       printf("%10d {",getTickCount());
 #endif
-      for(t = timers->First() ; t != NULL ; )
+      for(t = timers->GetHead() ; t != NULL ; )
       {
-        Timer * n = t->Next();
+        Timer * n = timers->GetNext(t);
         t->m_interval -= dt ;
 #ifdef LIBMD_TIMER_DEBUG
         printf("rest %d ",t->m_interval);
@@ -220,10 +214,10 @@ void StartTimerService()
   }
 }
 
-void ListTimer()
+void ListTimer(bool rev)
 {
   if (timers != NULL)
   {
-    timers->Show(false);
+    timers->Show(rev);
   }
 }
