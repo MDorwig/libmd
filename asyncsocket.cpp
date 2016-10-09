@@ -51,9 +51,10 @@ int CAsyncSocket::GetOption(int name,int & value)
 	return res ;
 }
 
-int CAsyncSocket::GetName(struct sockaddr * sa,socklen_t * salen)
+int CAsyncSocket::GetName(sockaddr_in & sa)
 {
-	return getsockname(GetHandle(),sa,salen);
+  socklen_t salen = sizeof sa;
+	return getsockname(GetHandle(),(sockaddr*)&sa,&salen);
 }
 
 int CAsyncSocket::Create(int port,int type,int events)
@@ -75,7 +76,7 @@ int CAsyncSocket::Create(int port,int type,int events)
 			sain.sin_port   = htons(port);
 			m_state = SKT_BOUND;
 			SetOption(SO_REUSEADDR,1);
-			res = Bind((struct sockaddr*)&sain,sizeof sain);
+			res = Bind(sain);
 			if (res == 0)
 			{
 			  if (m_type == SOCK_DGRAM)
@@ -122,10 +123,11 @@ int CAsyncSocket::Listen(int backlog)
 	return res ;
 }
 
-int	CAsyncSocket::Bind(const struct sockaddr * sa,socklen_t salen)
+int	CAsyncSocket::Bind(const sockaddr_in & sa)
 {
 	int res ;
-	res = bind(GetHandle(),sa,salen);
+	socklen_t salen = sizeof sa;
+	res = bind(GetHandle(),(sockaddr*)&sa,salen);
 	if (res != -1)
 		m_state = SKT_BOUND;
 	else
@@ -135,19 +137,18 @@ int	CAsyncSocket::Bind(const struct sockaddr * sa,socklen_t salen)
 
 int	CAsyncSocket::Bind(int port)
 {
-	struct sockaddr_in sain;
-	socklen_t salen	;
+	sockaddr_in sain;
 	sain.sin_addr.s_addr = INADDR_ANY;
 	sain.sin_family = AF_INET;
 	sain.sin_port   = htons(port);
-	salen = sizeof sain;
-	return Bind((struct sockaddr*)&sain,salen);
+	return Bind(sain);
 }
 
-int	CAsyncSocket::Accept(CAsyncSocket & accskt,struct sockaddr * sa,socklen_t * salen)
+int	CAsyncSocket::Accept(CAsyncSocket & accskt,sockaddr_in & sa)
 {
 	int res ;
-	res = accept(GetHandle(),sa,salen);
+	socklen_t salen = sizeof sa;
+	res = accept(GetHandle(),(sockaddr*)&sa,&salen);
 	if (res != -1)
 	{
 		accskt.m_type  		= m_type;
@@ -164,10 +165,11 @@ int	CAsyncSocket::Accept(CAsyncSocket & accskt,struct sockaddr * sa,socklen_t * 
 	return res ;
 }
 
-int	CAsyncSocket::Connect(struct sockaddr * sa,socklen_t salen)
+int	CAsyncSocket::Connect(sockaddr_in & sa,socklen_t salen)
 {
 	int res ;
-	res = connect(GetHandle(),sa,salen);
+	m_peer = sa;
+	res = connect(GetHandle(),(sockaddr*)&sa,salen);
 	if (res == -1)
 	{
 		SetLastError(errno);
@@ -197,7 +199,7 @@ int	CAsyncSocket::Connect(const char * host,int port)
 	sain.sin_addr.s_addr = inet_addr(host);
 	sain.sin_port = htons(port);
 	sain.sin_family = AF_INET;
-	return Connect((struct sockaddr*)&sain,sizeof sain);
+	return Connect(sain,sizeof sain);
 }
 
 int CAsyncSocket::Receive(void * buf,size_t size,int flags)
