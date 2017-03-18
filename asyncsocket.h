@@ -50,10 +50,10 @@ public:
 	int						ShutDown(int how);
 	void					Dispatch(int events,int nerr);
 	int						Listen(int backlog);
-	int						Bind(const struct sockaddr * sa,socklen_t salen);
+	int						Bind(const sockaddr_in & sa);
 	int						Bind(int port);
-	int						Accept(CAsyncSocket & accskt,struct sockaddr * sa,socklen_t * salen);
-	int						Connect(struct sockaddr * sa,socklen_t salen);
+	int						Accept(CAsyncSocket & accskt,sockaddr_in & sa);
+	int						Connect(sockaddr_in & sa,socklen_t salen);
 	int						Connect(const char * host,int port);
 	int						Receive(void * buf,size_t len,int flags = 0);
 	int						Send(const void * buf,size_t len,int flags = 0);
@@ -62,9 +62,9 @@ public:
 	int						GetOption(int name,int & value);
 	sktstates     State() { return m_state;}
 	void          State(sktstates st) { m_state = st;}
-	int						GetName(struct sockaddr * sa,socklen_t * salen);
+	int						GetName(sockaddr_in & sa);
 	static const char * StateName(sktstates st);
-	struct sockaddr_in m_peer;
+	sockaddr_in   m_peer;
 private:
 	void					SetLastError(int nerr) { m_lasterror = nerr;}
 protected:
