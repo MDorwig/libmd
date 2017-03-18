@@ -420,7 +420,7 @@ void xmlparser::completeElement(bool checkname,const char * input)
       {
         popState();
         if (getState() != PS_OPENTAG)
-          throw xmlparserException("parse error in state %s near %s\n",StateName(getState()),input);
+          throw xmlparserException("parse error near %s\n",input);
       }
       if (m_curnode == NULL && n->type != XML_PI_NODE)
       {
@@ -635,12 +635,12 @@ restart:
               }
               else if (!isWhiteSpace(ch))
               {
-                throw xmlparserException("'>' expected in after \"%s\"\n",m_curnode->name);
+                throw xmlparserException("'>' expected near %s\n",*input);
               }
             break ;
 
             default:
-              throw xmlparserException("parse error in state %s near %s\n",StateName(getState()),*input);
+              throw xmlparserException("parse error near %s\n",*input);
             break ;
           }
         }
@@ -653,10 +653,9 @@ restart:
         }
         else
         {
-          throw xmlparserException("'>' expected in after \"%s\"\n",m_curnode->name);
+          throw xmlparserException("'>' expected near %s\n",*input);
         }
       break ;
-
 
       case  PS_START_TAG:
         if (ch == '/')
@@ -686,7 +685,7 @@ restart:
           setState(PS_IDLE);
         }
         else
-          throw xmlparserException("parse error in state %s near %s\n",StateName(getState()),*input);
+          throw xmlparserException("parse near %s\n",*input);
       break ;
 
       case  PS_ATTR_LIST:
@@ -718,7 +717,7 @@ restart:
           setState(PS_ATTR_EQ);
         }
         else
-          throw xmlparserException("attributename expected in state %s near %s\n",StateName(getState()),*input);
+          throw xmlparserException("attributename expected near %s\n",*input);
       break ;
 
       case  PS_ATTR_EQ:
@@ -729,7 +728,7 @@ restart:
             setState(PS_ATTR_VALUE);
           }
           else
-            throw xmlparserException("'=' expected in state %s near %s\n",StateName(getState()),*input);
+            throw xmlparserException("'=' expected near %s\n",*input);
         }
       break ;
 
@@ -742,6 +741,8 @@ restart:
             m_lexval = "";
             pushState(PS_STRING);
           }
+          else
+            throw xmlparserException("' or \" expected near %s\n",*input);
         }
       break ;
 
@@ -788,7 +789,7 @@ restart:
         	break ;
 
         	default:
-        		throw xmlparserException("parse error in state %s near %s\n",StateName(getState()),*input);
+        		throw xmlparserException("parse error near %s\n",*input);
         	break ;
 
         }
@@ -821,7 +822,7 @@ restart:
             break;
 
             default:
-              throw xmlparserException("parse error in state %s near %s\n",StateName(getState()),*input);
+              throw xmlparserException("parse error near %s\n",*input);
             break ;
           }
         }
@@ -854,7 +855,7 @@ restart:
             break;
 
             default:
-              throw xmlparserException("parse error in state %s near %s\n",StateName(getState()),*input);
+              throw xmlparserException("parse error near %s\n",*input);
             break ;
           }
         }
@@ -864,14 +865,14 @@ restart:
       	if (ch == 'u')
       		setState(PS_QUOT2);	// &qu
       	else
-      		throw xmlparserException("parse error in state %s near %s\n",StateName(getState()),*input);
+      		throw xmlparserException("parse error near %s\n",*input);
       break ;
 
       case	PS_QUOT2:
       	if (ch == 'o')
       		setState(PS_QUOT3);	// &quo
       	else
-      		throw xmlparserException("parse error in state %s near %s\n",StateName(getState()),*input);
+      		throw xmlparserException("parse error near %s\n",*input);
       break ;
 
       case PS_QUOT3:
@@ -881,7 +882,7 @@ restart:
       		setState(PS_ESCAPE4); // &quot
       	}
       	else
-      		throw xmlparserException("parse error in state %s near %s\n",StateName(getState()),*input);
+      		throw xmlparserException("parse error near %s\n",*input);
       break ;
 
       case  PS_AMPAPOS:
@@ -890,7 +891,7 @@ restart:
       	else if (ch == 'p')
       		setState(PS_APOS1);		// &ap
       	else
-      		throw xmlparserException("parse error in state %s near %s\n",StateName(getState()),*input);
+      		throw xmlparserException("parse error near %s\n",*input);
       break ;
 
       case PS_AMP1:
@@ -900,14 +901,14 @@ restart:
       		setState(PS_ESCAPE4);
       	}
       	else
-      		throw xmlparserException("parse error in state %s near %s\n",StateName(getState()),*input);
+      		throw xmlparserException("parse error near %s\n",*input);
       break ;
 
       case PS_APOS1:
       	if (ch == 'o')
       		setState(PS_APOS2);
       	else
-      		throw xmlparserException("parse error in state %s near %s\n",StateName(getState()),*input);
+      		throw xmlparserException("parse error near %s\n",*input);
       break ;
 
       case PS_APOS2:
@@ -917,7 +918,7 @@ restart:
       		setState(PS_ESCAPE4);
       	}
       	else
-      		throw xmlparserException("parse error in state %s near %s\n",StateName(getState()),*input);
+      		throw xmlparserException("parse error near %s\n",*input);
       break ;
 
       case  PS_LT:
@@ -927,7 +928,7 @@ restart:
       		setState(PS_ESCAPE4);
       	}
       	else
-      		throw xmlparserException("parse error in state %s near %s\n",StateName(getState()),*input);
+      		throw xmlparserException("parse error near %s\n",*input);
       break ;
 
       case  PS_GT:
@@ -937,7 +938,7 @@ restart:
       		setState(PS_ESCAPE4);
       	}
       	else
-      		throw xmlparserException("parse error in state %s near %s\n",StateName(getState()),*input);
+      		throw xmlparserException("parse error near %s\n",*input);
       break ;
 
       case  PS_CHARDATA:
@@ -952,7 +953,7 @@ restart:
             }
             break ;
             default:
-              throw xmlparserException("parse error in state %s near %s\n",StateName(getState()),*input);
+              throw xmlparserException("parse error near %s\n",*input);
             break ;
           }
         }
@@ -977,7 +978,7 @@ restart:
       break ;
 
       default:
-        throw xmlparserException("parse error in state %s near %s\n",StateName(getState()),*input);
+        throw xmlparserException("parse error near %s\n",*input);
       break ;
     }
   }
